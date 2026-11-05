@@ -1,0 +1,28 @@
+# Service gratuit ; comptes et progression conservés dans une base Turso externe.
+# Choisir uniquement l'offre gratuite chez Turso, sans activer la facturation.
+services:
+  - type: web
+    name: parlio
+    runtime: node
+    region: frankfurt
+    plan: free
+    numInstances: 1
+    autoDeploy: false
+    buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: REQUIRE_REMOTE_DATABASE
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_AUTH_TOKEN
+        sync: false
