@@ -3,7 +3,7 @@ import express, {
   type Request,
   type Response,
 } from "express";
-import { Database, type RemoteDatabaseOptions } from "./database";
+import { Database, type RemoteDatabaseOptions } from "./database.js";
 import {
   randomBytes,
   randomUUID,
@@ -14,7 +14,7 @@ import {
 import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { exerciseById, isUnlocked, lessonById } from "../shared/course";
+import { exerciseById, isUnlocked, lessonById } from "../shared/course.js";
 import {
   computeStreak,
   expectedAnswer,
@@ -22,7 +22,7 @@ import {
   localDay,
   practiceNotion,
   shiftDay,
-} from "../shared/learning";
+} from "../shared/learning.js";
 import type {
   Answer,
   AppState,

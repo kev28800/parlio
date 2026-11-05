@@ -4,7 +4,7 @@
 
 ## Lancer l’application
 
-Prérequis : **Node.js 24 ou ultérieur**, npm et un navigateur récent. Aucun compte de service externe ni clé API n’est nécessaire.
+Prérequis : **Node.js 24.x**, npm et un navigateur récent. Aucun compte de service externe ni clé API n’est nécessaire.
 
 ```bash
 cd /workspace/parlio
@@ -18,7 +18,7 @@ Par défaut, les données sont conservées dans `data/parlio.sqlite` (SQLite, no
 
 ### Version de production
 
-Pour créer une adresse Web publique, consulter [le guide de déploiement gratuit](DEPLOIEMENT.md). Une configuration Render Free avec stockage distant Turso et une image Docker sont fournies ; aucun hébergement n’est activé par leur seule présence. Créer les comptes gratuits chez ces fournisseurs est nécessaire pour obtenir une adresse publique.
+Pour créer une adresse Web publique, consulter [le guide de déploiement gratuit](DEPLOIEMENT.md). Une configuration Vercel Hobby avec stockage distant Turso est fournie, ainsi que des alternatives Render et Docker ; aucun hébergement n’est activé par leur seule présence. Créer les comptes gratuits chez ces fournisseurs est nécessaire pour obtenir une adresse publique.
 
 ```bash
 npm run build
@@ -119,7 +119,7 @@ Chromium doit être installé ; adaptez `CHROMIUM_PATH` si nécessaire. Aucun ut
 
 - **Audio** : voix anglaise du navigateur, déclenchée uniquement par l’utilisateur. Sans voix disponible, si l’audio est désactivé ou si la lecture échoue, une transcription explicite permet de continuer. Pas de reconnaissance vocale ni de score de prononciation.
 - **Comptes** : authentification locale opérationnelle, sans fournisseur externe. Vérification d’e-mail et récupération de mot de passe non implémentées ; un service d’e-mail transactionnel et les flux correspondants devront être ajoutés pour ces fonctions. Aucune fausse confirmation d’e-mail n’est envoyée.
-- **Exploitation** : instance Node unique avec SQLite local ou Turso/libSQL. La configuration gratuite utilise Render Free et une base Turso gratuite externe. Prévoir HTTPS, sauvegardes, politique de conservation, surveillance et restauration vérifiée avant d’héberger des données importantes. La limitation des connexions est en mémoire et se réinitialise au redémarrage ; un déploiement multi-instance nécessitera une limitation partagée.
+- **Exploitation** : instance Node unique avec SQLite local ou Turso/libSQL. La configuration principale utilise Vercel Hobby et une base Turso gratuite externe. Les offres sont soumises aux conditions et quotas des fournisseurs. Prévoir HTTPS, sauvegardes, politique de conservation, surveillance et restauration vérifiée avant d’héberger des données importantes. La limitation des connexions est en mémoire et se réinitialise au redémarrage ; un déploiement multi-instance nécessitera une limitation partagée.
 - **Premium** : écran d’information seulement. Paiement, droits Premium, statistiques avancées, cours supplémentaires et conversation IA ne sont pas implémentés. Aucun compte Stripe ni clé IA n’est nécessaire pour cette version.
 - **Pédagogie et publication** : relecture éditoriale et pédagogique à réaliser, informations légales à adapter au responsable du service. L’application n’a pas été déployée sur un hébergement public.
 

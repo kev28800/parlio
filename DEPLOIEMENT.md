@@ -1,8 +1,8 @@
-# Ouvrir Parlio avec une adresse Web — offres gratuites
+# Ouvrir Parlio avec Vercel Hobby et Turso Free
 
-Le code est préparé pour **Render Free** (l’application) et **Turso Free** (les comptes et la progression). Aucune offre payante ni disque payant n’est déclaré. Ces services imposent des quotas et peuvent modifier leurs offres : choisir uniquement les plans gratuits, sans activer de facturation ou de dépassement payant.
+Le parcours principal utilise **Vercel Hobby** pour ce projet personnel et **Turso Free** pour la base. Aucun service payant n’est créé par les fichiers du dépôt. Choisir uniquement les offres gratuites, dans leurs limites et conditions d’utilisation. Le compte Render testé a demandé une carte même avec Free sélectionné ; la configuration Vercel évite ce parcours.
 
-Publier l’environnement Codex sauvegarde le projet ; cela ne crée pas un site public. L’adresse du site n’existera qu’après l’activation des deux services ci-dessous. Leurs comptes doivent être créés par vous ; aucun compte ou abonnement n’est créé en votre nom par ces fichiers.
+Une publication Codex ne crée pas de site. Une importation Vercel peut afficher « Ready » alors que la connexion à la base reste à configurer : il faut vérifier l’application sur son adresse publique.
 
 ## 1. Créer la base gratuite
 
@@ -13,46 +13,49 @@ Publier l’environnement Codex sauvegarde le projet ; cela ne crée pas un site
 
 **Ne pas envoyer ce jeton dans le chat, le navigateur de Parlio ou GitHub.** Il doit être saisi directement dans les variables privées de l’hébergeur, à l’étape suivante. Ne pas utiliser un jeton d’administration de tout le compte Turso. Prévoir de renouveler le jeton avant sa date d’expiration, s’il en a une.
 
-## 2. Activer le site gratuit
+## 2. Activer le projet sur Vercel
 
-Ouvrir [l’installation Render de Parlio](https://render.com/deploy?repo=https://github.com/kev28800/parlio).
+Si le projet est déjà importé, le conserver : inutile d’en créer un autre. Le nouveau code doit être déployé depuis la branche `main`.
 
-1. Créer un compte Render, par exemple avec GitHub, et autoriser l’accès au dépôt `kev28800/parlio` si nécessaire.
-2. Utiliser le Blueprint `render.yaml` du dépôt. Vérifier que le service indique **Free** et qu’aucun disque ou autre service payant n’est ajouté.
-3. Renseigner les deux valeurs demandées :
+Pour une première importation : ouvrir [Vercel](https://vercel.com/new), choisir **Hobby / projet personnel**, connecter GitHub et importer `kev28800/parlio`. Le framework est **Vite**, la compilation et le dossier `dist` sont déclarés dans `vercel.json`. Node.js est fixé à **24.x** par `package.json`.
 
-   | Champ Render          | Valeur à saisir                   |
-   | --------------------- | --------------------------------- |
-   | `DATABASE_URL`        | L’URL de la base créée chez Turso |
-   | `DATABASE_AUTH_TOKEN` | Le jeton privé de cette base      |
+Dans le projet Vercel, ouvrir **Settings → Environment Variables**, puis ajouter :
 
-4. Lancer le déploiement gratuit et attendre la fin de la compilation et du démarrage.
-5. **Cliquer sur l’adresse HTTPS affichée pour le service Render. C’est l’adresse de Parlio.** Elle s’ouvre normalement sur téléphone ou ordinateur ; il n’est plus nécessaire d’utiliser `localhost`.
+| Name / Key            | Value                                           |
+| --------------------- | ----------------------------------------------- |
+| `DATABASE_URL`        | La valeur **Database URL** de votre base Turso  |
+| `DATABASE_AUTH_TOKEN` | Le jeton privé **Read & Write** créé dans Turso |
 
-Le nom de domaine exact est attribué par Render et n’est pas supposé à l’avance. Si un écran demande de souscrire une offre payante, ne pas confirmer : revenir vérifier le plan choisi. Le compte, les quotas et les conditions de gratuité doivent être vérifiés directement chez chaque fournisseur.
+Le nom `DATABASE_AUTH_TOKEN` va dans la colonne du nom. Le jeton privé va seulement dans la valeur. Ne pas mettre le jeton dans le nom de variable. Enregistrer pour l’environnement **Production** et aussi **Preview** si les aperçus doivent fonctionner. Les réglages publics des cookies et du proxy sont déjà dans `vercel.json`.
+
+Après un changement de variable, redéployer **la version la plus récente de la branche `main`**, dans **Deployments**. Redéployer un ancien commit ne récupère pas automatiquement le code récent. Une modification de variable seule ne corrige pas une version déjà construite.
+
+Ouvrir ensuite l’adresse HTTPS de **Production** affichée dans **Domains**, ou le bouton **Visit**. Cette adresse est celle de Parlio. Le nom exact est attribué par Vercel et n’est pas supposé à l’avance.
+
+La fonction Node `api/index.ts` sert les appels `/api/*`. L’interface et ses ressources sont servies séparément depuis `dist`. Une initialisation partagée et les transactions de la base préservent la progression entre les démarrages de fonctions. Aucun disque temporaire Vercel n’est utilisé pour sauvegarder les comptes.
 
 ## Ce que cette configuration conserve
 
 Le serveur est compilé et s’exécute avec Node.js 24 et les seules dépendances de production. Le contrôle `/api/health` vérifie la base sans créer d’utilisateur. Les transactions protègent les réponses et les récompenses, y compris quand des requêtes arrivent en même temps. L’absence de la base externe empêche le démarrage, au lieu d’enregistrer silencieusement les données sur un disque temporaire.
 
-Les comptes et la progression sont dans Turso, et restent indépendants des redémarrages de Render. Le jeton n’est jamais envoyé au navigateur. Les données d’essai de l’environnement Codex ne sont pas publiées : le site commence avec sa propre base vide.
+Une fois la configuration activée, les comptes et la progression sont dans Turso, indépendamment des démarrages et arrêts des fonctions Vercel. Le jeton n’est jamais envoyé au navigateur. Les données d’essai de l’environnement Codex ne sont pas publiées : le site commence avec sa propre base vide.
 
-Les autres réglages sont déjà présents dans `render.yaml` : cookies sécurisés, HTTPS fourni par l’hébergeur et `TRUST_PROXY_HOPS=1` pour son proxy. Ne pas modifier ces réglages pour résoudre un problème de connexion sans diagnostic.
+Les autres réglages sont déjà présents dans `vercel.json` : cookies sécurisés, en-têtes de sécurité et proxy de l’hébergeur. Ne pas modifier ces réglages pour résoudre un problème de connexion sans diagnostic.
 
 ## Limites des offres gratuites
 
-- Render peut mettre le service en veille : la première ouverture suivante peut prendre un moment.
-- Le fonctionnement reste soumis aux quotas et à la disponibilité de Render et de Turso. Aucun achat automatique n’est activé par le code.
+- Les fonctions Vercel peuvent démarrer à froid. Un écran de chargement ou de nouvelle tentative est prévu.
+- Le fonctionnement reste soumis aux quotas et à la disponibilité de Vercel et de Turso. Aucun achat automatique n’est activé par le code.
 - L’offre gratuite ne remplace pas un plan de sauvegarde : prévoir des exports et une restauration vérifiée pour des données importantes.
 - La vérification d’e-mail et la récupération de mot de passe ne sont pas encore intégrées. Le contenu pédagogique doit être relu avant commercialisation.
 
 ## Vérifier l’adresse obtenue
 
-Sur **l’adresse HTTPS réellement attribuée par Render** :
+Sur **l’adresse HTTPS réellement attribuée par Vercel** :
 
 1. Vérifier que `/api/health` renvoie `{"status":"ok","service":"parlio"}`.
 2. Terminer une leçon, créer un compte de test, se déconnecter et se reconnecter.
-3. Redémarrer le service depuis Render, puis vérifier que la progression revient.
+3. Redéployer la version actuelle depuis Vercel, puis vérifier que la progression revient.
 4. Supprimer le compte de test dans le profil.
 
 Les tests locaux, même avec le pilote libSQL, ne prouvent pas qu’un compte Turso réel est connecté ou qu’une adresse publique est déjà créée.
@@ -72,3 +75,7 @@ docker build --secret id=proxy_ca,src="$CODEX_PROXY_CERT" -t parlio .
 ```
 
 Le certificat n’est pas copié dans l’image et la vérification TLS reste activée.
+
+## Autre parcours Render
+
+Le fichier `render.yaml` et le Dockerfile restent disponibles pour une installation Render. Ce parcours a demandé des informations de carte pour le compte essayé ; il n’est plus la recommandation pour une ouverture sans saisie de carte. Aucun abonnement Render n’est activé par ce dépôt.

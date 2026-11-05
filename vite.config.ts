@@ -19,6 +19,8 @@ export default defineConfig({
         "**/*.db",
         "**/*.db-*",
         "**/server/**",
+        "**/api/**",
+        "**/.vercel/**",
         "**/tests/**",
       ],
     },

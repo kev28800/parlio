@@ -1,7 +1,7 @@
 import express from "express";
 import { resolve } from "node:path";
 import { createServer as createHttpServer } from "node:http";
-import { createApp } from "./app";
+import { createApp } from "./app.js";
 
 const { app, close } = await createApp();
 const port = Number(process.env.PORT || 3000);
