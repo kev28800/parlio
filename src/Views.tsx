@@ -20,14 +20,16 @@ import {
   Download,
   CalendarDays,
 } from "lucide-react";
-import { course, lessons, nextLesson } from "../shared/course";
+import { useCurriculum } from "./curriculum";
 import { useApp } from "./context";
 import { LessonSteps } from "./Dashboard";
 import { Fox, Modal, unitIcons } from "./ui";
 import { api } from "./api";
+import { SubscriptionManager } from "./Premium";
 import type { AppState } from "../shared/types";
 
 export function Path() {
+  const { course, language } = useCurriculum();
   const { state } = useApp();
   return (
     <>
@@ -37,7 +39,7 @@ export function Path() {
           <h1>
             Un mot après l’autre<span className="coral-text">.</span>
           </h1>
-          <p>Six unités, des petits pas et de nouvelles possibilités.</p>
+          <p>{language.name} · Six unités pour vos premiers échanges.</p>
         </div>
         <span className="progress-label">
           <BookOpen size={17} />
@@ -103,6 +105,7 @@ export function Path() {
   );
 }
 export function Review() {
+  const { nextLesson } = useCurriculum();
   const { state, navigate, startReview, startLesson, busy } = useApp();
   const [filter, setFilter] = useState<"all" | "due" | "fragile">("all");
   const now = new Date().toISOString();
@@ -391,16 +394,23 @@ const conceptNames: Record<string, string> = {
   repeat: "Demander de répéter",
 };
 export function conceptLabel(concept: string) {
+  if (/^(es|de):lexique:/.test(concept))
+    return `Vocabulaire · séance ${concept.split(":")[2]}`;
+  if (/^(es|de):grammaire:/.test(concept))
+    return `Grammaire · séance ${concept.split(":")[2]}`;
+  if (/^(es|de):/.test(concept)) return concept.slice(3);
   return conceptNames[concept] ?? concept.replaceAll("-", " ");
 }
 
 export function Profile() {
+  const { course, lessons, language } = useCurriculum();
   const {
     state,
     setState,
     changePreferences,
     openAuth,
     openOnboarding,
+    navigate,
     reportError,
   } = useApp();
   const [deleting, setDeleting] = useState(false);
@@ -462,29 +472,24 @@ export function Profile() {
       setSaving(false);
     }
   }
-  function exportProgress() {
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            exportedAt: new Date().toISOString(),
-            preferences: state.preferences,
-            completed: state.completed,
-            notions: state.notions,
-            history: state.history,
-          },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "ma-progression-parlio.json";
-    a.click();
-    URL.revokeObjectURL(url);
+  async function exportProgress() {
+    setSaving(true);
+    try {
+      const data = await api("/account/export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ma-progression-parlio.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      reportError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
   return (
     <>
@@ -511,7 +516,7 @@ export function Profile() {
               : state.user.email}
           </p>
           <span className="profile-level">
-            Anglais débutant · {state.completed.length} leçon
+            {language.name} débutant · {state.completed.length} leçon
             {state.completed.length > 1 ? "s" : ""} terminée
             {state.completed.length > 1 ? "s" : ""}
           </span>
@@ -522,6 +527,38 @@ export function Profile() {
             <ArrowRight size={17} />
           </button>
         )}
+      </section>
+      <section className="profile-subscription card">
+        <div>
+          <h2>
+            {state.billing.membership.premium
+              ? state.billing.mode === "test"
+                ? "Votre Premium de test"
+                : "Votre abonnement Premium"
+              : "Votre formule gratuite"}
+          </h2>
+          <p>
+            {state.billing.membership.premium
+              ? "Retrouvez votre bilan, l’atelier IA et la gestion de votre abonnement."
+              : "Les trois langues, les leçons et les révisions restent gratuites. Découvrez Premium pour aller plus loin."}
+          </p>
+        </div>
+        <div>
+          <button
+            className="button secondary"
+            onClick={() =>
+              navigate(
+                state.billing.membership.premium ? "insights" : "premium",
+              )
+            }
+          >
+            {state.billing.membership.premium
+              ? "Voir mon bilan"
+              : "Découvrir Premium"}
+            <ArrowRight size={16} />
+          </button>
+          <SubscriptionManager />
+        </div>
       </section>
       <div className="profile-stats">
         <div>
@@ -599,7 +636,7 @@ export function Profile() {
             </span>
             <div>
               <h3>Audio et sons</h3>
-              <p>Lecture anglaise à votre demande</p>
+              <p>Lecture dans la langue apprise, à votre demande</p>
             </div>
             <button
               className={`toggle ${state.preferences.sound ? "on" : ""}`}

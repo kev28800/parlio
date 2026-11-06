@@ -2,6 +2,8 @@
 
 Le parcours principal utilise **Vercel Hobby** pour ce projet personnel et **Turso Free** pour la base. Aucun service payant n’est créé par les fichiers du dépôt. Choisir uniquement les offres gratuites, dans leurs limites et conditions d’utilisation. Le compte Render testé a demandé une carte même avec Free sélectionné ; la configuration Vercel évite ce parcours.
 
+Le nouveau design et les trois langues utilisent ces mêmes variables de base. Les abonnements sont en mode test par défaut, le mode réel exige une activation distincte et l’IA reste désactivée sur cette publication. Voir [ACTIVATION.md](ACTIVATION.md) pour les branchements séparés. Vercel Hobby est destiné à un usage personnel non commercial : ne pas y lancer des abonnements payants.
+
 Une publication Codex ne crée pas de site. Une importation Vercel peut afficher « Ready » alors que la connexion à la base reste à configurer : il faut vérifier l’application sur son adresse publique.
 
 ## 1. Créer la base gratuite

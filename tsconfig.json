@@ -17,6 +17,7 @@
     "src",
     "server",
     "api",
+    "netlify",
     "shared",
     "tests",
     "vite.config.ts",

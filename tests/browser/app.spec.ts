@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { lessonById } from "../../shared/course";
 import AxeBuilder from "@axe-core/playwright";
 async function onboarding(page: Page) {
-  await page.goto("/");
+  await page.goto("/#today");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
@@ -187,7 +187,7 @@ test("contrôles WCAG automatisés et absence de débordement à 320 px", async 
 }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/");
+  await page.goto("/#today");
   async function audit() {
     const result = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
@@ -239,7 +239,7 @@ test("contrôles WCAG automatisés et absence de débordement à 320 px", async 
 });
 test("une connexion interrompue propose de réessayer", async ({ page }) => {
   await page.route("**/api/state", (route) => route.abort());
-  await page.goto("/");
+  await page.goto("/#today");
   await expect(
     page.getByRole("heading", { name: "On se reconnecte ?" }),
   ).toBeVisible();

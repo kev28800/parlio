@@ -23,7 +23,7 @@ import type {
   PublicExercise,
   RunView,
 } from "../shared/types";
-import { nextLesson } from "../shared/course";
+import { getCourse, nextLesson } from "../shared/courses";
 import { useApp } from "./context";
 import { api } from "./api";
 import { Fox, Modal, Spinner } from "./ui";
@@ -99,10 +99,21 @@ export default function Lesson({ id }: { id: string }) {
       </div>
       <div className="lesson-context">
         <span className="eyebrow small">
-          {run.review ? "UN PETIT RAPPEL" : "UNE NOUVELLE ÉTAPE"}
+          {run.source === "ai"
+            ? "PRATIQUE GÉNÉRÉE PAR IA"
+            : run.review
+              ? "UN PETIT RAPPEL"
+              : "UNE NOUVELLE ÉTAPE"}
         </span>
         <span>{run.title}</span>
       </div>
+      {run.source === "ai" && (
+        <p className="fine-print">
+          Cette séance est générée automatiquement et peut contenir des erreurs.
+          Elle complète les cours ; ses notions ne sont pas ajoutées au carnet
+          de révision.
+        </p>
+      )}
       <Exercise
         key={run.exercise!.id}
         run={run}
@@ -165,6 +176,7 @@ function Exercise({
 }) {
   const { state } = useApp();
   const exercise = run.exercise!;
+  const language = getCourse(run.courseId);
   const feedback = run.feedback;
   const [answer, setAnswer] = useState<Answer>(
     feedback?.answer ??
@@ -272,7 +284,7 @@ function Exercise({
       </h1>
       <div className="exercise-question">
         {exercise.type === "listen" ? (
-          <Audio exercise={exercise} />
+          <Audio exercise={exercise} courseId={run.courseId} />
         ) : (
           <p>{exercise.prompt}</p>
         )}
@@ -368,7 +380,7 @@ function Exercise({
             <span>
               {exercise.type === "fill"
                 ? "Le mot manquant"
-                : "Votre traduction en anglais"}
+                : `Votre traduction en ${language.name.toLowerCase()}`}
             </span>
             <textarea
               key={exercise.id}
@@ -518,23 +530,28 @@ function Exercise({
 function ShieldIcon() {
   return <Check size={14} />;
 }
-function Audio({ exercise }: { exercise: PublicExercise }) {
+function Audio({
+  exercise,
+  courseId,
+}: {
+  exercise: PublicExercise;
+  courseId: RunView["courseId"];
+}) {
+  const language = getCourse(courseId);
   const { state } = useApp();
   const [fallback, setFallback] = useState("");
   const [speaking, setSpeaking] = useState(false);
   const [available, setAvailable] = useState(false);
   useEffect(() => {
     if (!("speechSynthesis" in window)) {
-      setFallback(
-        "La synthèse vocale anglaise n’est pas disponible sur cet appareil.",
-      );
+      setFallback("La synthèse vocale n’est pas disponible sur cet appareil.");
       return;
     }
     function voices() {
-      const hasEnglish = window.speechSynthesis
+      const hasVoice = window.speechSynthesis
         .getVoices()
-        .some((v) => v.lang.toLowerCase().startsWith("en"));
-      setAvailable(hasEnglish);
+        .some((v) => v.lang.toLowerCase().startsWith(language.id));
+      setAvailable(hasVoice);
     }
     voices();
     window.speechSynthesis.addEventListener("voiceschanged", voices);
@@ -542,18 +559,20 @@ function Audio({ exercise }: { exercise: PublicExercise }) {
       window.speechSynthesis.cancel();
       window.speechSynthesis.removeEventListener("voiceschanged", voices);
     };
-  }, []);
+  }, [language.id]);
   function play() {
     if (!state.preferences.sound || !available) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(exercise.transcript!);
-    utterance.lang = "en-GB";
+    utterance.lang = language.locale;
     utterance.rate = 0.82;
     utterance.voice =
       window.speechSynthesis
         .getVoices()
-        .find((v) => v.lang.startsWith("en-GB")) ??
-      window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("en")) ??
+        .find((v) => v.lang === language.locale) ??
+      window.speechSynthesis
+        .getVoices()
+        .find((v) => v.lang.startsWith(language.id)) ??
       null;
     utterance.onstart = () => setSpeaking(true);
     utterance.onend = () => setSpeaking(false);
@@ -569,7 +588,7 @@ function Audio({ exercise }: { exercise: PublicExercise }) {
     ? "L’audio est désactivé dans vos paramètres."
     : fallback ||
       (!available
-        ? "Aucune voix anglaise n’est disponible sur cet appareil."
+        ? `Aucune voix en ${language.name.toLowerCase()} n’est disponible sur cet appareil.`
         : "");
   return (
     <div className="audio-exercise">
@@ -579,7 +598,9 @@ function Audio({ exercise }: { exercise: PublicExercise }) {
         onClick={play}
         disabled={Boolean(reason)}
         aria-label={
-          speaking ? "Réécouter la phrase" : "Écouter la phrase en anglais"
+          speaking
+            ? "Réécouter la phrase"
+            : `Écouter la phrase en ${language.name.toLowerCase()}`
         }
       >
         <Volume2 size={31} />
@@ -593,7 +614,7 @@ function Audio({ exercise }: { exercise: PublicExercise }) {
       {reason && (
         <div className="audio-fallback">
           <span>{reason} Lisez la phrase pour continuer :</span>
-          <strong lang="en">{exercise.transcript}</strong>
+          <strong lang={language.id}>{exercise.transcript}</strong>
         </div>
       )}
     </div>
@@ -602,10 +623,10 @@ function Audio({ exercise }: { exercise: PublicExercise }) {
 function Result({ run }: { run: RunView }) {
   const { state, startLesson, navigate, openAuth, busy } = useApp();
   const result = run.result!;
-  const next = nextLesson([
-    ...state.completed,
-    ...(result.lessonId ? [result.lessonId] : []),
-  ]);
+  const next = nextLesson(
+    [...state.allCompleted, ...(result.lessonId ? [result.lessonId] : [])],
+    run.courseId,
+  );
   const accuracy = Math.round((result.correct / result.total) * 100);
   return (
     <div className="result-page">

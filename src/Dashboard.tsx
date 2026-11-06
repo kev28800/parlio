@@ -14,7 +14,8 @@ import {
   RotateCcw,
   Flag,
 } from "lucide-react";
-import { course, lessons, nextLesson, isUnlocked } from "../shared/course";
+import { isUnlocked } from "../shared/courses";
+import { useCurriculum } from "./curriculum";
 import type { Unit } from "../shared/types";
 import { useApp } from "./context";
 import { Fox, unitIcons } from "./ui";
@@ -25,7 +26,7 @@ export function LessonSteps({ unit }: { unit: Unit }) {
     <div className="lesson-steps">
       {unit.lessons.map((lesson, i) => {
         const done = state.completed.includes(lesson.id);
-        const unlocked = isUnlocked(lesson.id, state.completed);
+        const unlocked = isUnlocked(lesson.id, state.allCompleted);
         return (
           <div
             className={`lesson-step ${done ? "done" : unlocked ? "current" : "locked"}`}
@@ -61,6 +62,7 @@ export function LessonSteps({ unit }: { unit: Unit }) {
   );
 }
 export default function Dashboard() {
+  const { course, lessons, nextLesson, language } = useCurriculum();
   const { state, navigate, startLesson, startReview, busy, openOnboarding } =
     useApp();
   const recommended = nextLesson(state.completed);
@@ -80,10 +82,15 @@ export default function Dashboard() {
       <div className="page-heading">
         <div>
           <div className="eyebrow small">
-            UN PEU D’ANGLAIS, BEAUCOUP DE POSSIBILITÉS
+            {language.name.toUpperCase()} · VOTRE RENDEZ-VOUS QUOTIDIEN
           </div>
           <h1>
-            Hello, {state.user.guest ? "vous" : state.user.name}{" "}
+            {language.id === "de"
+              ? "Hallo"
+              : language.id === "es"
+                ? "Hola"
+                : "Hello"}
+            , {state.user.guest ? "vous" : state.user.name}{" "}
             <span className="greeting-sun" aria-hidden="true">
               ✳︎
             </span>
@@ -92,7 +99,7 @@ export default function Dashboard() {
         </div>
         <span className="level-tag">
           <span className="status-dot" /> Débutant{" "}
-          <span className="tag-separator">/</span> Anglais
+          <span className="tag-separator">/</span> {language.name}
         </span>
       </div>
       <div className="dashboard-grid">
@@ -116,7 +123,14 @@ export default function Dashboard() {
                       "vous attend."
                     ) : (
                       <>
-                        par un <span>hello.</span>
+                        par un{" "}
+                        <span>
+                          {language.id === "de"
+                            ? "hallo."
+                            : language.id === "es"
+                              ? "hola."
+                              : "hello."}
+                        </span>
                       </>
                     )}
                   </>
@@ -131,7 +145,7 @@ export default function Dashboard() {
               <p>
                 {recommended
                   ? state.completed.length
-                    ? "Un peu de pratique, un peu de confiance. Votre anglais grandit à chaque leçon."
+                    ? "Un peu de pratique, un peu de confiance. Vous avancez à chaque leçon."
                     : "Un mot, puis un autre. Et bientôt, votre première conversation."
                   : "Faites vivre vos nouveaux mots avec une petite séance de révision."}
               </p>
@@ -283,7 +297,7 @@ export default function Dashboard() {
             </h3>
             <p>
               {goalPercent >= 100
-                ? "Vous avez tenu votre rendez-vous avec l’anglais."
+                ? "Vous avez tenu votre rendez-vous avec les langues."
                 : "Une leçon suffit pour prendre un peu d’avance sur hier."}
             </p>
             <button className="text-button subtle" onClick={openOnboarding}>

@@ -4,7 +4,7 @@ import { createApp } from "./app.js";
 type Runtime = Pick<Awaited<ReturnType<typeof createApp>>, "app">;
 type Initializer = () => Promise<Runtime>;
 
-async function initializeProduction(): Promise<Runtime> {
+export async function initializeProduction(): Promise<Runtime> {
   const url = process.env.DATABASE_URL?.trim();
   const authToken = process.env.DATABASE_AUTH_TOKEN?.trim();
   // Une fonction sans disque durable ne doit jamais utiliser la base locale.

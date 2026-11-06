@@ -6,7 +6,7 @@ export interface AppContextValue {
   navigate: (page: string) => void;
   startLesson: (id: string) => Promise<void>;
   startReview: () => Promise<void>;
-  changePreferences: (changes: Partial<Preferences>) => Promise<void>;
+  changePreferences: (changes: Partial<Preferences>) => Promise<boolean>;
   openAuth: (mode?: "register" | "login") => void;
   openOnboarding: () => void;
   busy: boolean;

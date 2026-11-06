@@ -1,3 +1,6 @@
+import type { BillingOverview } from "./billing";
+import type { AiOverview } from "./ai";
+export type CourseId = "en" | "es" | "de";
 export type ExerciseType =
   | "choice"
   | "pairs"
@@ -36,6 +39,7 @@ export interface Unit {
   lessons: Lesson[];
 }
 export interface Preferences {
+  courseId: CourseId;
   level: "beginner" | "basics";
   goal: "travel" | "daily" | "work";
   dailyMinutes: 5 | 10 | 15;
@@ -62,6 +66,8 @@ export interface Feedback {
   answer: Answer;
 }
 export interface LessonResult {
+  source?: "ai";
+  courseId?: CourseId;
   runId: string;
   lessonId: string | null;
   review: boolean;
@@ -73,6 +79,8 @@ export interface LessonResult {
   toReview: string[];
 }
 export interface RunView {
+  source?: "ai";
+  courseId: CourseId;
   id: string;
   lessonId: string | null;
   review: boolean;
@@ -84,6 +92,10 @@ export interface RunView {
   result: LessonResult | null;
 }
 export interface AppState {
+  ai: AiOverview;
+  allCompleted: string[];
+  courseProgress: { id: CourseId; completed: number; total: number }[];
+  billing: BillingOverview;
   user: { id: string; name: string; email: string | null; guest: boolean };
   preferences: Preferences;
   completed: string[];

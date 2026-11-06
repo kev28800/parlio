@@ -1,10 +1,10 @@
 # Parlio
 
-**Un petit pas, un nouveau monde.** Une première application d’anglais débutant pour francophones, avec des leçons de cinq minutes et Pip, un compagnon renard original.
+**Un petit pas, un nouveau monde.** Apprentissage de l’anglais, de l’espagnol et de l’allemand pour francophones. Accueil éditorial, leçons de cinq minutes et révisions espacées.
 
 ## Lancer l’application
 
-Prérequis : **Node.js 24.x**, npm et un navigateur récent. Aucun compte de service externe ni clé API n’est nécessaire.
+Prérequis : **Node.js 24.x**, npm et un navigateur récent.
 
 ```bash
 cd /workspace/parlio
@@ -12,91 +12,92 @@ npm ci
 npm run dev
 ```
 
-Le serveur de développement écoute sur le port **3000**, sur toutes les interfaces. Il sert à la fois l’API Express et l’interface React/Vite. Les modifications du serveur entraînent son redémarrage ; Vite actualise l’interface. Les polices sont servies localement.
+Le serveur écoute sur **3000** et sert l’API Express et React/Vite. Les polices sont locales. Sur une machine distante, utiliser son aperçu ou un transfert de port : `localhost` sur votre ordinateur ne désigne pas l’environnement cloud.
 
-Par défaut, les données sont conservées dans `data/parlio.sqlite` (SQLite, non suivi par Git). Fermer le navigateur ou redémarrer le serveur ne les efface pas. Ne supprimez pas ce dossier pour conserver la progression. Avec `DATABASE_URL` et `DATABASE_AUTH_TOKEN`, la sauvegarde utilise une base distante Turso/libSQL. Un essai est lié à un cookie de session valable 30 jours ; créer un compte permet de retrouver la progression depuis un autre navigateur connecté au même serveur.
-
-### Version de production
-
-Pour créer une adresse Web publique, consulter [le guide de déploiement gratuit](DEPLOIEMENT.md). Une configuration Vercel Hobby avec stockage distant Turso est fournie, ainsi que des alternatives Render et Docker ; aucun hébergement n’est activé par leur seule présence. Créer les comptes gratuits chez ces fournisseurs est nécessaire pour obtenir une adresse publique.
+Les leçons gratuites ne nécessitent aucun service IA ni compte Stripe. SQLite conserve les données dans `data/parlio.sqlite`, ignoré par Git. Ne pas effacer ce dossier pour préserver les progrès locaux. Avec `DATABASE_URL` et `DATABASE_AUTH_TOKEN`, le serveur utilise Turso/libSQL. Un cookie conserve l’essai trente jours ; un compte permet de retrouver ses progrès sur un autre appareil.
 
 ```bash
 npm run build
 npm start
 ```
 
-En production, utilisez **HTTPS** et une base distante persistante, ou un volume persistant si vous choisissez SQLite local. Les cookies sont `Secure` par défaut. Pour un contrôle **strictement local en HTTP**, utilisez `COOKIE_SECURE=false npm start` ; ne conservez pas cette exception lors d’une exposition publique. Les ressources de l’interface sont servies depuis `dist/` avec une politique CSP. Le serveur compilé dans `build/server/` fonctionne sans les dépendances de développement.
+Le serveur de production est compilé dans `build/server/index.mjs`, sans dépendances de développement. Utiliser HTTPS et une base persistante. Pour un contrôle strictement local en HTTP : `COOKIE_SECURE=false npm start`.
 
-Variables facultatives, à fournir au processus (aucun fichier `.env` n’est chargé automatiquement) :
+[Déploiement](DEPLOIEMENT.md) · [Activation Stripe de test et tuteur IA](ACTIVATION.md)
 
-| Variable                  | Valeur par défaut                                 | Utilité                                                                   |
-| ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| `PORT`                    | `3000`                                            | Port du serveur                                                           |
-| `DATABASE_PATH`           | `data/parlio.sqlite` dans le dossier de lancement | Chemin d’une base persistante                                             |
-| `DATABASE_URL`            | non défini                                        | URL HTTPS/libsql d’une base Turso ; remplace le stockage local            |
-| `DATABASE_AUTH_TOKEN`     | non défini                                        | Jeton privé de la base distante, réservé au serveur                       |
-| `REQUIRE_REMOTE_DATABASE` | non défini                                        | `true` empêche le stockage temporaire si la configuration distante manque |
-| `TRUST_PROXY_HOPS`        | `0`                                               | `1` uniquement derrière le proxy fiable de l’hébergeur                    |
-| `COOKIE_SECURE`           | activé en production, désactivé en développement  | Cookies réservés à HTTPS                                                  |
-| `CHROMIUM_PATH`           | `/usr/bin/chromium`                               | Navigateur utilisé par les tests Playwright                               |
+## Fonctions
 
-Lancez les commandes depuis la racine du dépôt. L’environnement cloud est déjà isolé : réutilisez ce checkout ; aucun worktree supplémentaire n’est nécessaire.
+- Trois parcours indépendants : **6 unités × 3 leçons × 8 exercices par langue**, soit **54 leçons et 432 exercices**. Les identifiants et progrès anglais de la version précédente restent compatibles.
+- Six formats : choix, paires, reconstruction, mot manquant, écrit et écoute. Consignes et explications en français ; variantes acceptées explicitement.
+- Choix de langue, reprise, déblocage progressif, correction immédiate et bilan. Une erreur ne bloque pas la fin d’une leçon.
+- Révisions par langue : notions dues puis fragiles, carnet et historique. Une erreur rapproche la révision à dix minutes ; les réussites espacées d’au moins vingt heures donnent des intervalles de 1, 3, 7, 14 puis 30 jours. Cette règle simple ne constitue pas une promesse d’efficacité scientifique.
+- XP et série communs aux langues, calculés à partir de séances réelles. Les minutes sont une durée pédagogique indicative, créditée en fin de séance, sans chronométrage.
+- Comptes, transfert de l’essai, connexion, déconnexion, export des progrès de toutes les langues et des conversations, suppression du compte.
+- Objectif de 5, 10 ou 15 minutes, fuseau horaire, audio facultatif, réduction des animations, téléphone et ordinateur, clavier et dialogues natifs.
+- Premium : Stripe Checkout, notifications signées, droits côté serveur, portail client, bilan par unité et sur trente jours. Prix vérifiés : 10,99 €/mois ou 69,99 €/an. Mode test par défaut ; mode réel conditionné à une configuration explicite et un hébergement commercial. Sans configuration, le paiement est désactivé.
+- Tuteur IA de conversation avec OpenAI Responses, explications en français et exemples dans la langue choisie. Consentement explicite, conversations privées par langue, effacement et quotas persistants. Sans clé, aucune réponse fictive n’est affichée.
+- Séance IA de quatre exercices préparée à la demande, une par langue et journée UTC : format validé, correction côté serveur, reprise et XP idempotents. Ces exercices restent distincts du carnet éditorial.
 
-## Ce qui fonctionne
+L’IA nécessite un budget API distinct d’un abonnement ChatGPT. Aucun encaissement, crédit API ni hébergement payant n’est activé par le dépôt. Les cours gratuits restent disponibles sans ces services.
 
-- Personnalisation initiale : niveau estimé, motivation et objectif de 5, 10 ou 15 minutes. Les mêmes bases sont proposées à tous, sans prétendre à un placement de niveau.
-- Accueil avec prochaine leçon, reprise d’une séance interrompue, XP, série et objectif quotidien.
-- **6 unités × 3 leçons × 8 exercices = 144 exercices** : traduction à choix, associations, phrase à reconstruire, mot manquant, traduction écrite et écoute.
-- Une question à la fois, correction et explication immédiates, bilan et possibilité de refaire les leçons. Une erreur ne bloque jamais la suite.
-- Révisions avec priorité aux notions dues puis fragiles ; carnet, filtres, historique de pratique et prochaine date.
-- Progression, XP, badges et journées calculés à partir de données réelles. Les minutes sont une durée pédagogique **indicative**, créditée à la fin d’une séance, et non un chronométrage.
-- Comptes e-mail/mot de passe, transfert de l’essai à l’inscription, connexion depuis plusieurs appareils, déconnexion, export de progression et suppression définitive du compte et de ses données.
-- Réglages de l’audio, du fuseau horaire et des animations ; adaptation téléphone, tablette et ordinateur ; navigation clavier et dialogues natifs avec gestion du focus.
-- Présentation d’une future offre Premium : **6,99 €/mois ou 49,99 €/an**, hypothèses modifiables. Le parcours et les révisions restent gratuits. Aucun paiement n’est simulé.
+## Configuration
 
-## Organisation du code
+Fournir les variables au processus : aucun fichier `.env` n’est chargé automatiquement. Les secrets vont uniquement dans les réglages privés de l’hébergeur.
+
+| Variable                  | Défaut               | Rôle                                                            |
+| ------------------------- | -------------------- | --------------------------------------------------------------- |
+| `PORT`                    | `3000`               | Port du serveur                                                 |
+| `DATABASE_PATH`           | `data/parlio.sqlite` | Base locale                                                     |
+| `DATABASE_URL`            | absente              | Adresse HTTPS/libsql Turso                                      |
+| `DATABASE_AUTH_TOKEN`     | absent               | Jeton privé de la base                                          |
+| `REQUIRE_REMOTE_DATABASE` | absent               | `true` refuse le stockage temporaire si la base distante manque |
+| `TRUST_PROXY_HOPS`        | `0`                  | `1` derrière le proxy fiable de l’hébergeur                     |
+| `COOKIE_SECURE`           | actif en production  | Cookies réservés à HTTPS                                        |
+| `CHROMIUM_PATH`           | `/usr/bin/chromium`  | Navigateur de test                                              |
+
+Les variables `STRIPE_TEST_*`, `PUBLIC_APP_URL` et `PARLIO_AI_*` sont détaillées dans [ACTIVATION.md](ACTIVATION.md). Ne jamais les préfixer avec `VITE_`, qui les exposerait au navigateur. Vercel conserve les octets bruts nécessaires à la signature Stripe avec `NODEJS_HELPERS=0`.
+
+L’environnement cloud est déjà isolé : réutiliser ce checkout sans créer de worktree supplémentaire.
+
+## Organisation
 
 ```text
 shared/
-  course.ts       # Contenu éditorial : unités, leçons, variantes, explications
-  learning.ts     # Correction, révision espacée, jours et séries
-  types.ts        # Contrats partagés
+  course.ts                    # Anglais et identifiants historiques
+  spanish.ts, german.ts        # Autres contenus éditoriaux
+  multilingual-content.ts      # Construction des six formats
+  courses.ts                   # Registre et progression par langue
+  learning.ts                  # Correction, révisions, dates
+  types.ts, billing.ts, ai.ts   # Contrats partagés
 server/
-  app.ts          # API, validation, sessions, comptes, stockage SQLite
-  index.ts        # Serveur Vite / ressources de production
+  app.ts                       # API, comptes, séances, statistiques
+  billing.ts                   # Stripe de test et droits
+  ai.ts                        # OpenAI, quotas et conversations
+  database.ts                  # Transactions SQLite / Turso
+  index.ts, serverless.ts       # Serveur local / fonction Vercel
+  netlify.ts                   # Adaptateur Netlify compatible avec les notifications signées
+api/index.ts                   # Entrée Vercel
 src/
-  App.tsx         # Navigation, état courant, structure responsive
-  Dashboard.tsx   # Accueil et étapes de leçons
-  Lesson.tsx      # Exercices, audio et bilan
-  Views.tsx       # Parcours, carnet de révision, profil
-  Account.tsx     # Démarrage, inscription, connexion, offre future
-  ui.tsx          # Pip, marque, dialogues et indicateurs
-  styles.css      # Identité visuelle, responsive et accessibilité
-tests/
-  learning.test.ts  # Contenu, correction, fuseaux, séries et intervalles
-  api.test.ts       # Parcours complet, idempotence, comptes et persistance
-  browser/         # Scénarios Playwright et contrôles axe
+  Website.tsx, site.css         # Accueil public et direction visuelle
+  App.tsx, curriculum.ts        # Navigation, état, choix de langue
+  Dashboard.tsx, Views.tsx      # Apprentissage, révisions et profil
+  Lesson.tsx                   # Exercices, audio et bilan
+  Premium.tsx, Insights.tsx     # Paiement de test et bilan
+  Tutor.tsx                    # Conversation et pratique IA
+  Account.tsx, ui.tsx           # Comptes, démarrage et dialogues
 ```
 
-### Modifier le contenu
+## Contenu et intégrité
 
-Éditez `shared/course.ts`. Chaque leçon possède un identifiant stable et huit exercices. Les petits constructeurs `c`, `p`, `a`, `f`, `w`, `l` décrivent respectivement un choix, des paires, une reconstruction, un mot à compléter, une réponse écrite et une écoute. Ils portent tous une notion et une explication. Les réponses écrites acceptables sont des listes explicites : ajoutez une variante uniquement si elle conserve le sens.
+Les réponses écrites sont des listes explicites. La correction normalise casse, espaces, apostrophes et ponctuation, en conservant les diacritiques. Elle n’utilise pas de correspondance approximative acceptant une négation ou une autre personne. Conserver les identifiants et concepts publiés.
 
-La correction normalise casse, espaces, apostrophes typographiques et ponctuation. Elle n’utilise pas de correspondance approximative qui pourrait accepter une négation ou une autre personne. La validation définitive se fait côté serveur. Les contenus sont publics : leur présence dans le code de l’interface n’accorde aucun droit à modifier les récompenses du serveur.
+Les réponses, déblocages et récompenses sont validés côté serveur avec Zod. Les transactions protègent les validations simultanées et les récompenses répétées. Les solutions d’une séance générée restent côté serveur jusqu’à la correction. Les cours éditoriaux sont publics.
 
-Conservez les identifiants des leçons, exercices et notions déjà pratiqués pour que la progression reste cohérente. Des changements structurels futurs demanderont des migrations. L’architecture sépare le contenu et la présentation pour permettre d’autres cours ; **seul le cours français → anglais est livré**.
+Les mots de passe utilisent `scrypt` et un sel aléatoire. Les sessions aléatoires sont hachées en base, dans un cookie `HttpOnly`, `SameSite=Lax`, `Secure` en production. Les mutations ordinaires vérifient l’origine et un en-tête dédié. Stripe possède une route indépendante avec signature officielle et vérification du mode configuré. L’URL de retour de Checkout n’accorde aucun abonnement.
 
-**Ce contenu original d’initiation doit être relu par une personne compétente en enseignement de l’anglais avant publication commerciale. Aucun niveau officiel ou certification n’est annoncé.**
+Les quotas IA par compte et globaux sont réservés en base avant l’appel, y compris en concurrence. Les échecs sont comptés et les demandes terminées répétées ne rappellent pas le modèle. Aucun outil ni accès Web n’est accordé au tuteur. Le navigateur ne choisit ni clé, ni modèle, ni droits.
 
-### Règle de révision
-
-Pour chaque notion : tentatives, réussites, erreurs, dernière pratique, prochaine révision et intervalle sont enregistrés. Une erreur prévoit une révision dans **10 minutes** et remet la série de réussites à zéro. Les réussites espacées d’au moins **20 heures** donnent des intervalles de **1, 3, 7, 14 puis 30 jours**. Les réussites immédiates n’allongent pas l’intervalle. Les séances de révision comprennent jusqu’à huit notions déjà rencontrées ; réviser en avance reste possible. Cette règle simple n’est pas présentée comme un algorithme scientifiquement validé.
-
-### Intégrité et comptes
-
-Les réponses, les droits d’accès aux leçons et les récompenses sont validés sur le serveur avec Zod. Chaque séance a un identifiant persistant et un curseur. Réenvoyer une réponse ou la dernière validation ne crée ni nouvelle tentative ni seconde récompense ; des transactions SQLite rendent l’écriture de la réponse et de la notion atomique. Une nouvelle séance volontaire d’une leçon peut, elle, gagner des XP.
-
-Les mots de passe sont hachés avec `scrypt` et un sel aléatoire. Les jetons de session aléatoires sont hachés dans la base et placés dans un cookie `HttpOnly`, `SameSite=Lax`, `Secure` en production. L’inscription et la connexion renouvellent la session. Chaque lecture ou modification d’une séance est limitée au propriétaire authentifié. Les mutations exigent un en-tête dédié et une origine cohérente ; les connexions sont limitées en fréquence. Supprimer un compte efface par cascade ses sessions, notions et séances. Aucun secret n’est placé dans le navigateur.
+**Les trois cours originaux doivent être relus par des spécialistes des langues concernées avant commercialisation.** Aucune certification de niveau ou de prononciation n’est annoncée. Une réponse IA peut comporter une erreur pédagogique.
 
 ## Vérifications
 
@@ -107,20 +108,14 @@ npm run build
 npm run test:e2e
 ```
 
-Les tests serveur utilisent une base temporaire et un port aléatoire. Ils exécutent notamment **les 18 leçons puis une révision**, simulent un redémarrage avec la même base, vérifient les récompenses répétées, la rotation des sessions, l’isolation de deux comptes, la suppression en cascade et les requêtes intersites.
+Les tests couvrent les cours via l’API, les anciens progrès, la séparation des langues et comptes, les transactions, les droits Premium, les signatures et l’ordre des notifications Stripe, les quotas et l’effacement des conversations IA. Stripe et le modèle sont simulés : aucun appel payant n’est effectué.
 
-`npm run test:libsql` exécute aussi les tests de l’API avec le pilote libSQL et une base de test locale. Les transactions concurrentes, leur annulation et le refus d’une configuration distante invalide sont couverts. Cela ne valide pas une connexion à un compte Turso réel : cette vérification nécessite sa configuration effective.
+Le pilote libSQL utilise une base locale de test : il ne prouve pas une connexion à un compte Turso réel. Playwright utilise Chromium et un serveur indépendant sur **3100**, parcourt les formats et le nouveau site, contrôle les débordements et recherche des violations WCAG 2 A/AA et 2.1 AA avec axe. Ces contrôles ne constituent pas une certification d’accessibilité.
 
-Les tests navigateur démarrent un serveur séparé sur **3100** avec une base dans `/tmp/parlio-browser-tests.sqlite`. Ils parcourent les six formats, une erreur et sa correction, une reprise après rechargement, l’inscription, les réglages, les états vides et une panne réseau. Ils contrôlent l’absence de débordement horizontal et recherchent des violations WCAG 2 A/AA et 2.1 AA avec axe. Ces contrôles automatisés ne constituent pas une certification d’accessibilité.
+## Limites
 
-Chromium doit être installé ; adaptez `CHROMIUM_PATH` si nécessaire. Aucun utilisateur ni classement fictif n’est affiché dans le produit.
-
-## Limites et branchements avant une ouverture publique
-
-- **Audio** : voix anglaise du navigateur, déclenchée uniquement par l’utilisateur. Sans voix disponible, si l’audio est désactivé ou si la lecture échoue, une transcription explicite permet de continuer. Pas de reconnaissance vocale ni de score de prononciation.
-- **Comptes** : authentification locale opérationnelle, sans fournisseur externe. Vérification d’e-mail et récupération de mot de passe non implémentées ; un service d’e-mail transactionnel et les flux correspondants devront être ajoutés pour ces fonctions. Aucune fausse confirmation d’e-mail n’est envoyée.
-- **Exploitation** : instance Node unique avec SQLite local ou Turso/libSQL. La configuration principale utilise Vercel Hobby et une base Turso gratuite externe. Les offres sont soumises aux conditions et quotas des fournisseurs. Prévoir HTTPS, sauvegardes, politique de conservation, surveillance et restauration vérifiée avant d’héberger des données importantes. La limitation des connexions est en mémoire et se réinitialise au redémarrage ; un déploiement multi-instance nécessitera une limitation partagée.
-- **Premium** : écran d’information seulement. Paiement, droits Premium, statistiques avancées, cours supplémentaires et conversation IA ne sont pas implémentés. Aucun compte Stripe ni clé IA n’est nécessaire pour cette version.
-- **Pédagogie et publication** : relecture éditoriale et pédagogique à réaliser, informations légales à adapter au responsable du service. L’application n’a pas été déployée sur un hébergement public.
-
-Le cœur du produit fonctionne sans service externe. Aucune clé ni valeur secrète n’est à saisir pour l’essayer dans cet environnement.
+- Synthèse vocale de l’appareil selon la langue choisie ; transcription en secours. Pas de conversation vocale en temps réel ni de score de prononciation.
+- Pas encore de vérification d’e-mail ou de récupération de mot de passe. La limitation des connexions reste en mémoire ; prévoir une limitation partagée pour plusieurs instances.
+- Sauvegardes, restauration, conservation et informations légales à adapter au responsable du service.
+- Paiements réels désactivés par défaut ; activation explicite après configuration de Stripe et de l’hébergement commercial. **Vercel Hobby est réservé à un usage personnel non commercial** : vendre un abonnement nécessite un hébergement adapté et un travail distinct sur les paiements et les obligations du vendeur.
+- Les tests ne valident ni les identifiants privés des fournisseurs ni la qualité d’une réponse de modèle réel. Voir [ACTIVATION.md](ACTIVATION.md) pour l’activation.

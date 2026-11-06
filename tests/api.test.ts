@@ -6,6 +6,11 @@ import { join } from "node:path";
 import type { Server } from "node:http";
 import { createApp } from "../server/app";
 import { exerciseById, lessonById, lessons } from "../shared/course";
+import {
+  courses,
+  lessonById as multilingualLessons,
+  exerciseCourse,
+} from "../shared/courses";
 import type { AppState, Exercise, RunView } from "../shared/types";
 let runtime: Awaited<ReturnType<typeof createApp>>;
 let server: Server;
@@ -98,7 +103,7 @@ test("le contrôle de santé vérifie la base sans créer d’utilisateur ni de 
   assert.equal(await count(), before);
 });
 async function finish(client: Client, run: RunView, wrongFirst = false) {
-  const content = lessonById.get(run.lessonId!)!;
+  const content = multilingualLessons.get(run.lessonId!)!;
   for (let i = 0; i < run.total; i++) {
     const answer =
       wrongFirst && i === 0 ? "Au revoir" : goodAnswer(content.exercises[i]);
@@ -443,4 +448,106 @@ test("les requêtes simultanées ne créent ni séance ni tentative en double", 
   const final = await client.state();
   assert.equal(final.preferences.sound, false);
   assert.equal(final.preferences.reducedMotion, true);
+});
+
+test("les trois langues gardent leurs leçons, révisions et reprises ; les anciens progrès anglais restent lisibles", async () => {
+  const client = new Client();
+  const initial = await client.state();
+  const first = await client.request("/api/runs", "POST", {
+    lessonId: "u1-l1",
+  });
+  const completed = await finish(client, first.data);
+  // Simule les données de la version publiée avant l’ajout du champ courseId.
+  const legacy = JSON.parse(
+    (
+      (await runtime.db
+        .prepare("SELECT data FROM runs WHERE id=?")
+        .get(completed.id)) as { data: string }
+    ).data,
+  );
+  delete legacy.courseId;
+  delete legacy.result.courseId;
+  await runtime.db
+    .prepare("UPDATE runs SET data=? WHERE id=?")
+    .run(JSON.stringify(legacy), completed.id);
+  const account = (await runtime.db
+    .prepare("SELECT preferences FROM users WHERE id=?")
+    .get(initial.user.id)) as { preferences: string };
+  const preferences = JSON.parse(account.preferences);
+  delete preferences.courseId;
+  await runtime.db
+    .prepare("UPDATE users SET preferences=? WHERE id=?")
+    .run(JSON.stringify(preferences), initial.user.id);
+  assert.equal((await client.state()).preferences.courseId, "en");
+  for (const language of courses.filter((c) => c.id !== "en")) {
+    let response = await client.request("/api/preferences", "PATCH", {
+      courseId: language.id,
+    });
+    assert.equal(response.response.status, 200);
+    assert.equal(response.data.preferences.courseId, language.id);
+    assert.deepEqual(response.data.completed, []);
+    assert.deepEqual(response.data.notions, []);
+    const sequence = language.units.flatMap((u) => u.lessons);
+    response = await client.request("/api/runs", "POST", {
+      lessonId: sequence[1].id,
+    });
+    assert.equal(response.response.status, 403);
+    for (const lesson of sequence) {
+      response = await client.request("/api/runs", "POST", {
+        lessonId: lesson.id,
+      });
+      assert.equal(response.response.status, 201, lesson.id);
+      assert.equal(response.data.courseId, language.id);
+      await finish(client, response.data);
+    }
+    const state = await client.state();
+    assert.equal(state.completed.length, 18);
+    assert.ok(state.history.every((r) => r.courseId === language.id));
+    assert.ok(state.notions.length > 0);
+    assert.ok(
+      state.notions.every(
+        (n) => exerciseCourse.get(n.exerciseId) === language.id,
+      ),
+    );
+    response = await client.request("/api/runs", "POST", { mode: "review" });
+    assert.equal(response.response.status, 201);
+    assert.equal(response.data.courseId, language.id);
+    assert.equal(exerciseCourse.get(response.data.exercise.id), language.id);
+    assert.equal((await client.state()).activeRun, response.data.id);
+  }
+  await client.request("/api/preferences", "PATCH", { courseId: "en" });
+  const restored = await client.state();
+  assert.deepEqual(restored.completed, ["u1-l1"]);
+  assert.equal(restored.history.length, 1);
+  assert.equal(restored.stats.xp, 37 * 60);
+  assert.equal(restored.allCompleted.length, 37);
+  assert.deepEqual(
+    restored.courseProgress.map((c) => c.completed),
+    [1, 18, 18],
+  );
+  assert.ok(
+    restored.notions.every((n) => exerciseCourse.get(n.exerciseId) === "en"),
+  );
+  assert.equal(restored.activeRun, null);
+  const exported = await client.request("/api/account/export");
+  assert.equal(exported.response.status, 200);
+  assert.equal(exported.data.completed.length, 37);
+  assert.equal(exported.data.history.length, 37);
+  assert.equal(exported.data.user.id, initial.user.id);
+  assert.ok(
+    exported.data.notions.some(
+      (n: { exerciseId: string }) => exerciseCourse.get(n.exerciseId) === "es",
+    ),
+  );
+  assert.ok(
+    exported.data.notions.some(
+      (n: { exerciseId: string }) => exerciseCourse.get(n.exerciseId) === "de",
+    ),
+  );
+  assert.equal(exported.data.user.password, undefined);
+  assert.equal(
+    (await client.request("/api/preferences", "PATCH", { courseId: "ja" }))
+      .response.status,
+    400,
+  );
 });

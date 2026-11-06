@@ -4,6 +4,12 @@ import express, {
   type Response,
 } from "express";
 import { Database, type RemoteDatabaseOptions } from "./database.js";
+import { createAi, AiError, type AiOverrides } from "./ai.js";
+import {
+  createBilling,
+  BillingError,
+  type BillingOverrides,
+} from "./billing.js";
 import {
   randomBytes,
   randomUUID,
@@ -14,7 +20,16 @@ import {
 import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { exerciseById, isUnlocked, lessonById } from "../shared/course.js";
+import {
+  exerciseById,
+  isUnlocked,
+  lessonById,
+  getCourse,
+  courses,
+  courseIds,
+  lessonCourse,
+  exerciseCourse,
+} from "../shared/courses.js";
 import {
   computeStreak,
   expectedAnswer,
@@ -27,7 +42,9 @@ import type {
   Answer,
   AppState,
   Feedback,
+  Exercise,
   LessonResult,
+  CourseId,
   Notion,
   Preferences,
   RunView,
@@ -37,6 +54,7 @@ const digest = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 const SESSION_LIFETIME = 30 * 86400000;
 const defaults: Preferences = {
+  courseId: "en",
   level: "beginner",
   goal: "travel",
   dailyMinutes: 5,
@@ -54,6 +72,9 @@ type UserRow = {
   preferences: string;
 };
 type Run = {
+  source?: "ai";
+  exerciseSnapshot?: Exercise[];
+  courseId?: CourseId;
   id: string;
   userId: string;
   lessonId: string | null;
@@ -79,6 +100,7 @@ export async function createApp(
         authToken: process.env.DATABASE_AUTH_TOKEN,
       }
     : undefined,
+  services: { billing?: BillingOverrides; ai?: AiOverrides } = {},
 ) {
   if (process.env.REQUIRE_REMOTE_DATABASE === "true" && !remoteOptions?.url)
     throw new Error(
@@ -118,6 +140,12 @@ export async function createApp(
       );
     next();
   });
+  const billing = await createBilling(db, services.billing);
+  const ai = await createAi(db, services.ai);
+  await db.exec(
+    "CREATE TABLE IF NOT EXISTS ai_daily_practice (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, day TEXT NOT NULL, course_id TEXT NOT NULL, request_id TEXT NOT NULL, PRIMARY KEY(user_id,day,course_id))",
+  );
+  billing.publicRoutes(app);
   app.use("/api", express.json({ limit: "16kb" }));
   app.use("/api", (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
@@ -239,21 +267,54 @@ export async function createApp(
   });
   async function state(id: string): Promise<AppState> {
     const account = await user(id);
-    const preferences: Preferences = JSON.parse(account.preferences);
-    const runs = await allRuns(id);
-    const history = runs
+    const preferences: Preferences = {
+      ...defaults,
+      ...JSON.parse(account.preferences),
+    };
+    preferences.courseId = getCourse(preferences.courseId).id;
+    const everyRun = await allRuns(id);
+    const runCourse = (run: Run) =>
+      run.courseId ??
+      (run.lessonId ? lessonCourse.get(run.lessonId) : undefined) ??
+      "en";
+    const runs = everyRun.filter(
+      (run) => runCourse(run) === preferences.courseId,
+    );
+    const everyHistory = everyRun
       .flatMap((run) => (run.result ? [run.result] : []))
       .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
-    const practiced = await notions(id);
+    const history = everyHistory.filter(
+      (result) =>
+        (result.courseId ??
+          (result.lessonId ? lessonCourse.get(result.lessonId) : undefined) ??
+          "en") === preferences.courseId,
+    );
+    const practiced = (await notions(id)).filter(
+      (n) =>
+        (exerciseCourse.get(n.exerciseId) ?? "en") === preferences.courseId,
+    );
+    const allCompleted = [
+      ...new Set(everyHistory.flatMap((r) => (r.lessonId ? [r.lessonId] : []))),
+    ];
     const today = localDay(new Date(), preferences.timezone);
     const daily = new Map<string, number>();
-    for (const result of history) {
+    for (const result of everyHistory) {
       const day = localDay(new Date(result.completedAt), preferences.timezone);
       daily.set(day, (daily.get(day) ?? 0) + result.minutes);
     }
     const answered = runs.flatMap((run) => run.answers);
     const correct = answered.filter((answer) => answer.correct).length;
     return {
+      ai: ai.overview(),
+      allCompleted,
+      courseProgress: courses.map((course) => ({
+        id: course.id,
+        completed: allCompleted.filter(
+          (id) => lessonCourse.get(id) === course.id,
+        ).length,
+        total: course.units.reduce((sum, unit) => sum + unit.lessons.length, 0),
+      })),
+      billing: await billing.overview(id),
       user: {
         id,
         name: account.name,
@@ -272,10 +333,10 @@ export async function createApp(
       notions: practiced,
       history,
       stats: {
-        xp: history.reduce((sum, r) => sum + r.xp, 0),
+        xp: everyHistory.reduce((sum, r) => sum + r.xp, 0),
         streak: computeStreak([...daily.keys()], today),
         todayMinutes: daily.get(today) ?? 0,
-        todayXp: history
+        todayXp: everyHistory
           .filter(
             (r) =>
               localDay(new Date(r.completedAt), preferences.timezone) === today,
@@ -311,21 +372,27 @@ export async function createApp(
     return JSON.parse(row.data);
   }
   function view(run: Run): RunView {
-    const full = run.result
-      ? null
-      : exerciseById.get(run.exerciseIds[run.cursor])!;
+    const full = run.result ? null : runExercise(run, run.cursor);
     let exercise = null;
     if (full) {
       const { answers: _answers, explanation: _explanation, ...safe } = full;
       exercise = safe;
     }
     return {
+      ...(run.source ? { source: run.source } : {}),
+      courseId:
+        run.courseId ??
+        (run.lessonId ? lessonCourse.get(run.lessonId) : undefined) ??
+        "en",
       id: run.id,
       lessonId: run.lessonId,
       review: run.review,
-      title: run.lessonId
-        ? lessonById.get(run.lessonId)!.title
-        : "Un peu de pratique",
+      title:
+        run.source === "ai"
+          ? "Votre pratique générée par IA"
+          : run.lessonId
+            ? lessonById.get(run.lessonId)!.title
+            : "Un peu de pratique",
       index: run.cursor,
       total: run.exerciseIds.length,
       exercise,
@@ -336,9 +403,184 @@ export async function createApp(
   app.get("/api/state", async (_req, res) =>
     res.json(await state(res.locals.userId)),
   );
+  billing.authenticatedRoutes(app);
+  function runExercise(run: Run, index: number): Exercise {
+    const id = run.exerciseIds[index];
+    const exercise =
+      run.exerciseSnapshot?.find((item) => item.id === id) ??
+      exerciseById.get(id);
+    if (!exercise)
+      throw new ApiError(
+        404,
+        "Le contenu de cet exercice n’est plus disponible.",
+      );
+    return exercise;
+  }
+  async function registeredUser(id: string) {
+    const account = await user(id);
+    if (account.guest)
+      throw new ApiError(
+        401,
+        "Connectez-vous à votre compte pour utiliser cet espace.",
+      );
+    return account;
+  }
+  async function premiumUser(id: string) {
+    const account = await registeredUser(id);
+    await billing.requirePremium(id);
+    return account;
+  }
+  app.get("/api/premium/stats", async (_req, res) => {
+    const id = res.locals.userId;
+    await premiumUser(id);
+    const current = await state(id);
+    const today = localDay(new Date(), current.preferences.timezone);
+    const selectedRuns = (await allRuns(id)).filter(
+      (run) =>
+        !run.source &&
+        (run.courseId ??
+          (run.lessonId ? lessonCourse.get(run.lessonId) : undefined) ??
+          "en") === current.preferences.courseId,
+    );
+    res.json({
+      days: Array.from({ length: 30 }, (_, i) => {
+        const date = shiftDay(today, i - 29);
+        const results = current.history.filter(
+          (r) =>
+            localDay(new Date(r.completedAt), current.preferences.timezone) ===
+            date,
+        );
+        return {
+          date,
+          minutes: results.reduce((sum, r) => sum + r.minutes, 0),
+          xp: results.reduce((sum, r) => sum + r.xp, 0),
+        };
+      }),
+      completedLessons: current.completed.length,
+      units: getCourse(current.preferences.courseId).units.map((unit) => {
+        const ids = new Set(
+          unit.lessons.flatMap((lesson) => lesson.exercises.map((e) => e.id)),
+        );
+        const answers = selectedRuns.flatMap((run) =>
+          run.answers.filter((_answer, i) => ids.has(run.exerciseIds[i])),
+        );
+        return {
+          id: unit.id,
+          title: unit.title,
+          answered: answers.length,
+          accuracy: answers.length
+            ? Math.round(
+                (100 * answers.filter((a) => a.correct).length) /
+                  answers.length,
+              )
+            : null,
+        };
+      }),
+    });
+  });
+  app.get("/api/ai/conversation", async (_req, res) => {
+    await registeredUser(res.locals.userId);
+    const current = await state(res.locals.userId);
+    res.json(
+      await ai.conversation(res.locals.userId, current.preferences.courseId),
+    );
+  });
+  app.delete("/api/ai/conversation", async (_req, res) => {
+    await registeredUser(res.locals.userId);
+    const current = await state(res.locals.userId);
+    await transaction(async () => {
+      await db
+        .prepare("DELETE FROM ai_messages WHERE user_id=? AND course_id=?")
+        .run(res.locals.userId, current.preferences.courseId);
+      await db
+        .prepare(
+          "UPDATE ai_requests SET status='cancelled',data=NULL WHERE user_id=? AND kind=?",
+        )
+        .run(res.locals.userId, `tutor:${current.preferences.courseId}`);
+    });
+    res.json({ courseId: current.preferences.courseId, messages: [] });
+  });
+  app.post("/api/ai/tutor", async (req, res) => {
+    const { requestId, message } = z
+      .object({
+        requestId: z.string().uuid(),
+        message: z.string().trim().min(1).max(1200),
+        consent: z.literal(true),
+      })
+      .strict()
+      .parse(req.body);
+    await premiumUser(res.locals.userId);
+    const current = await state(res.locals.userId);
+    res.json(
+      await ai.chat(
+        res.locals.userId,
+        current.preferences.courseId,
+        requestId,
+        message,
+      ),
+    );
+  });
+  app.post("/api/ai/practice", async (req, res) => {
+    z.object({ consent: z.literal(true) })
+      .strict()
+      .parse(req.body);
+    const uid = res.locals.userId;
+    await premiumUser(uid);
+    const current = await state(uid);
+    const day = new Date().toISOString().slice(0, 10);
+    const id = await transaction(async () => {
+      await db
+        .prepare(
+          "INSERT INTO ai_daily_practice (user_id,day,course_id,request_id) VALUES (?,?,?,?) ON CONFLICT(user_id,day,course_id) DO NOTHING",
+        )
+        .run(uid, day, current.preferences.courseId, randomUUID());
+      return (
+        (await db
+          .prepare(
+            "SELECT request_id FROM ai_daily_practice WHERE user_id=? AND day=? AND course_id=?",
+          )
+          .get(uid, day, current.preferences.courseId)) as {
+          request_id: string;
+        }
+      ).request_id;
+    });
+    const existing = (await allRuns(uid)).find((run) => run.id === id);
+    if (existing) return res.json(view(existing));
+    const concepts = [...current.notions]
+      .sort((a, b) => b.errors - a.errors)
+      .slice(0, 8)
+      .map((n) => n.concept);
+    const exercises = await ai.practice(
+      uid,
+      current.preferences.courseId,
+      id,
+      concepts,
+    );
+    const result = await transaction(async () => {
+      const saved = (await allRuns(uid)).find((run) => run.id === id);
+      if (saved) return view(saved);
+      const run: Run = {
+        id,
+        userId: uid,
+        source: "ai",
+        courseId: current.preferences.courseId,
+        lessonId: null,
+        review: true,
+        exerciseSnapshot: exercises,
+        exerciseIds: exercises.map((e) => e.id),
+        cursor: 0,
+        answers: [],
+        result: null,
+      };
+      await saveRun(run);
+      return view(run);
+    });
+    res.status(201).json(result);
+  });
   const preferencesSchema = z
     .object({
       level: z.enum(["beginner", "basics"]),
+      courseId: z.enum(courseIds),
       goal: z.enum(["travel", "daily", "work"]),
       dailyMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
       timezone: z
@@ -387,7 +629,7 @@ export async function createApp(
       const current = await state(uid);
       if (mode !== "review" && (!lessonId || !lessonById.has(lessonId)))
         throw new ApiError(400, "Choisissez une leçon valide.");
-      if (mode !== "review" && !isUnlocked(lessonId!, current.completed))
+      if (mode !== "review" && !isUnlocked(lessonId!, current.allCompleted))
         throw new ApiError(
           403,
           "Terminez la leçon précédente pour débloquer celle-ci.",
@@ -395,6 +637,13 @@ export async function createApp(
       const existing = (await allRuns(uid)).find(
         (run) =>
           !run.result &&
+          run.source !== "ai" &&
+          (run.courseId ??
+            (run.lessonId ? lessonCourse.get(run.lessonId) : undefined) ??
+            "en") ===
+            (mode === "review"
+              ? current.preferences.courseId
+              : lessonCourse.get(lessonId!)) &&
           run.review === (mode === "review") &&
           (mode === "review" || run.lessonId === lessonId),
       );
@@ -418,6 +667,10 @@ export async function createApp(
           "Faites une première leçon pour retrouver ici vos mots à réviser.",
         );
       const run: Run = {
+        courseId:
+          mode === "review"
+            ? current.preferences.courseId
+            : lessonCourse.get(lessonId!),
         id: randomUUID(),
         userId: uid,
         lessonId: mode === "review" ? null : lessonId!,
@@ -457,7 +710,7 @@ export async function createApp(
           "Cet exercice a déjà avancé. Reprenez la leçon.",
         );
       if (run.answers[run.cursor]) return view(run);
-      const exercise = exerciseById.get(run.exerciseIds[run.cursor])!;
+      const exercise = runExercise(run, run.cursor);
       const correct = grade(exercise, input.answer as Answer);
       await transaction(async () => {
         run.answers.push({
@@ -467,6 +720,7 @@ export async function createApp(
           answer: input.answer as Answer,
         });
         await saveRun(run);
+        if (run.source === "ai") return;
         const previous = (await notions(run.userId)).find(
           (n) => n.concept === exercise.concept,
         );
@@ -498,6 +752,11 @@ export async function createApp(
         if (run.cursor === run.exerciseIds.length) {
           const correct = run.answers.filter((answer) => answer.correct).length;
           run.result = {
+            ...(run.source ? { source: run.source } : {}),
+            courseId:
+              run.courseId ??
+              (run.lessonId ? lessonCourse.get(run.lessonId) : undefined) ??
+              "en",
             runId: run.id,
             lessonId: run.lessonId,
             review: run.review,
@@ -508,15 +767,16 @@ export async function createApp(
               ? Math.max(1, Math.ceil(run.exerciseIds.length / 3))
               : 5,
             completedAt: new Date().toISOString(),
-            toReview: [
-              ...new Set(
-                run.answers.flatMap((answer, i) =>
-                  answer.correct
-                    ? []
-                    : [exerciseById.get(run.exerciseIds[i])!.concept],
-                ),
-              ),
-            ],
+            toReview:
+              run.source === "ai"
+                ? []
+                : [
+                    ...new Set(
+                      run.answers.flatMap((answer, i) =>
+                        answer.correct ? [] : [runExercise(run, i).concept],
+                      ),
+                    ),
+                  ],
           };
         }
         await saveRun(run);
@@ -635,6 +895,33 @@ export async function createApp(
     });
     res.status(responseStatus).json(result);
   });
+  app.get("/api/account/export", async (_req, res) => {
+    const uid = res.locals.userId;
+    const current = await state(uid);
+    const messages = (await db
+      .prepare(
+        "SELECT course_id,data FROM ai_messages WHERE user_id=? ORDER BY created_at,rowid",
+      )
+      .all(uid)) as { course_id: string; data: string }[];
+    res.json({
+      exportedAt: new Date().toISOString(),
+      user: current.user,
+      preferences: current.preferences,
+      completed: current.allCompleted,
+      courseProgress: current.courseProgress,
+      notions: await notions(uid),
+      history: (await allRuns(uid)).flatMap((run) =>
+        run.result ? [run.result] : [],
+      ),
+      membership: current.billing.membership,
+      conversations: courses.map((course) => ({
+        courseId: course.id,
+        messages: messages
+          .filter((row) => row.course_id === course.id)
+          .map((row) => JSON.parse(row.data)),
+      })),
+    });
+  });
   app.delete("/api/account", async (req, res) => {
     const account = await user(res.locals.userId);
     if (!account.guest) {
@@ -650,6 +937,7 @@ export async function createApp(
           "Mot de passe incorrect. Le compte n’a pas été supprimé.",
         );
     }
+    await billing.removeAccount(account.id);
     await db.prepare("DELETE FROM users WHERE id=?").run(account.id);
     const guest = await createGuest();
     await session(res, guest.id);
@@ -667,6 +955,10 @@ export async function createApp(
           .status(400)
           .json({ error: error.issues[0]?.message || "Données invalides." });
       if (error instanceof ApiError)
+        return res.status(error.status).json({ error: error.message });
+      if (error instanceof BillingError)
+        return res.status(error.status).json({ error: error.message });
+      if (error instanceof AiError)
         return res.status(error.status).json({ error: error.message });
       if (error instanceof SyntaxError)
         return res

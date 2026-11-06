@@ -20,6 +20,7 @@ export default defineConfig({
         "**/*.db-*",
         "**/server/**",
         "**/api/**",
+        "**/netlify/**",
         "**/.vercel/**",
         "**/tests/**",
       ],

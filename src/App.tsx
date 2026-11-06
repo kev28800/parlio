@@ -15,23 +15,32 @@ import {
   ArrowRight,
   ShieldCheck,
   Leaf,
+  MessageCircle,
+  BarChart3,
 } from "lucide-react";
+import { courses, getCourse } from "../shared/courses";
 import type { AppState, Preferences, RunView } from "../shared/types";
 import { api } from "./api";
 import { AppContext } from "./context";
 import { Brand, Fox, Modal, Spinner } from "./ui";
 import Dashboard from "./Dashboard";
 import { Path, Profile, Review } from "./Views";
-import { Auth, Onboarding, Premium } from "./Account";
+import { Auth, Onboarding } from "./Account";
+import { Premium, PremiumContent } from "./Premium";
+import Website from "./Website";
+import Tutor from "./Tutor";
+import Insights from "./Insights";
 import Lesson from "./Lesson";
 
 const tabs = [
   { id: "today", label: "Aujourd’hui", Icon: House },
   { id: "path", label: "Mon parcours", Icon: Route },
   { id: "review", label: "Mes révisions", Icon: RotateCcw },
+  { id: "tutor", label: "Atelier IA", Icon: MessageCircle },
+  { id: "insights", label: "Mon bilan", Icon: BarChart3 },
   { id: "profile", label: "Mon profil", Icon: UserRound },
 ];
-const readPage = () => window.location.hash.slice(1) || "today";
+const readPage = () => window.location.hash.slice(1).split("?")[0] || "welcome";
 export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [page, setPage] = useState(readPage);
@@ -66,11 +75,12 @@ export default function App() {
   useEffect(() => {
     if (
       state &&
+      ["today", "path", "review"].includes(page) &&
       !state.preferences.onboarded &&
       !onboardingDismissed.current.has(state.user.id)
     )
       setOnboarding(true);
-  }, [state?.user.id, state?.preferences.onboarded]);
+  }, [state?.user.id, state?.preferences.onboarded, page]);
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(
       state?.preferences.reducedMotion ?? false,
@@ -110,8 +120,10 @@ export default function App() {
   async function changePreferences(changes: Partial<Preferences>) {
     try {
       setState(await api<AppState>("/preferences", "PATCH", changes));
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     }
   }
   function closeOnboarding() {
@@ -137,6 +149,7 @@ export default function App() {
       </div>
     );
   const inLesson = page.startsWith("lesson/");
+  const selectedCourse = getCourse(state.preferences.courseId);
   return (
     <AppContext.Provider
       value={{
@@ -162,188 +175,207 @@ export default function App() {
       >
         Aller au contenu
       </a>
-      <div className="app-shell">
-        <aside className={`sidebar ${menu ? "open" : ""}`}>
-          <button
-            className="logo-button"
-            onClick={() => navigate("today")}
-            aria-label="Parlio, accueil"
-          >
-            <Brand />
-          </button>
-          <span className="brand-caption">UN PETIT PAS, UN NOUVEAU MONDE.</span>
-          <button
-            className="icon-button sidebar-close"
-            aria-label="Fermer le menu"
-            onClick={() => setMenu(false)}
-          >
-            <X />
-          </button>
-          <div className="nav-eyebrow">VOTRE ESPACE</div>
-          <nav aria-label="Navigation principale">
-            {tabs.map(({ id, label, Icon }) => (
-              <a
-                href={`#${id}`}
-                key={id}
-                className={`nav-item ${page === id || (inLesson && id === "today") ? "active" : ""}`}
-                aria-current={page === id ? "page" : undefined}
-                onClick={() => setMenu(false)}
-              >
-                <Icon size={21} strokeWidth={1.8} />
-                <span>{label}</span>
-                {id === "review" && state.review.due > 0 && (
-                  <span className="nav-count">{state.review.due}</span>
-                )}
-              </a>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <div className="sidebar-premium">
-              <span className="premium-icon">
-                <Sparkles size={22} />
-              </span>
-              <span className="eyebrow small">ET SI ON ALLAIT PLUS LOIN ?</span>
-              <h3>
-                La curiosité
-                <br />
-                n’a pas de limites.
-              </h3>
-              <p>
-                Découvrez ce que l’on
-                <br />
-                imagine pour la suite.
-              </p>
-              <button onClick={() => setPremium(true)}>
-                Parlio Premium
-                <ArrowUpRight size={16} />
-              </button>
-            </div>
-            <button className="help-button" onClick={() => setHelp(true)}>
-              <CircleHelp size={18} />
-              <span>Un petit coup de pouce ?</span>
-              <ArrowUpRight size={14} />
+      {page === "welcome" ? (
+        <Website />
+      ) : (
+        <div className="app-shell">
+          <aside className={`sidebar ${menu ? "open" : ""}`}>
+            <button
+              className="logo-button"
+              onClick={() => navigate("welcome")}
+              aria-label="Parlio, accueil"
+            >
+              <Brand />
             </button>
-            <span className="sidebar-copyright">
-              Fait pour apprendre. À votre rythme.
+            <span className="brand-caption">
+              UN PETIT PAS, UN NOUVEAU MONDE.
             </span>
-          </div>
-        </aside>
-        {menu && (
-          <button
-            className="menu-backdrop"
-            aria-label="Fermer le menu"
-            onClick={() => setMenu(false)}
-          />
-        )}
-        <div className="main-shell">
-          <header className="topbar">
-            <div className="topbar-left">
-              <button
-                className="icon-button mobile-menu"
-                onClick={() => setMenu(true)}
-                aria-label="Ouvrir le menu"
-              >
-                <Menu size={23} />
-              </button>
-              <span className="topbar-message">
-                Un petit rendez-vous avec l’anglais
-                <span className="coral-text">.</span>
-              </span>
-              <span className="mobile-brand">
-                <Brand small />
-              </span>
-            </div>
-            <div className="topbar-actions">
-              <button
-                className="language-button"
-                onClick={() => setLanguage(true)}
-                aria-label="Langue apprise : anglais"
-              >
-                <span className="uk-flag" aria-hidden="true">
-                  🇬🇧
-                </span>
-                <span>Anglais</span>
-                <ChevronDown size={14} />
-              </button>
-              <span className="topbar-divider" />
-              <button
-                className="header-stat streak-stat"
-                onClick={() => navigate("profile")}
-                aria-label={`${state.stats.streak} jours de série`}
-              >
-                <Flame size={20} fill="#f5d6bc" />
-                <strong>{state.stats.streak}</strong>
-              </button>
-              <button
-                className="header-stat xp-stat"
-                onClick={() => navigate("profile")}
-                aria-label={`${state.stats.xp} points d’expérience`}
-              >
-                <Zap size={20} fill="#f4d16f" />
-                <strong>
-                  {state.stats.xp}
-                  <span> XP</span>
-                </strong>
-              </button>
-              <button
-                className="header-avatar"
-                onClick={() => navigate("profile")}
-                aria-label="Ouvrir mon profil"
-              >
-                {state.user.guest ? (
-                  <UserRound size={20} />
-                ) : (
-                  state.user.name[0].toUpperCase()
-                )}
-              </button>
-            </div>
-          </header>
-          <main
-            id="main"
-            tabIndex={-1}
-            className={`main-content ${inLesson ? "in-lesson" : ""}`}
-          >
-            {inLesson ? (
-              <Lesson id={page.slice(7)} />
-            ) : page === "path" ? (
-              <Path />
-            ) : page === "review" ? (
-              <Review />
-            ) : page === "profile" ? (
-              <Profile />
-            ) : page === "today" ? (
-              <Dashboard />
-            ) : (
-              <div className="empty-state card">
-                <Route size={34} />
-                <h1>Un petit détour ?</h1>
-                <p>Cette page n’existe pas. Votre parcours vous attend.</p>
-                <button
-                  className="button primary"
-                  onClick={() => navigate("today")}
+            <button
+              className="icon-button sidebar-close"
+              aria-label="Fermer le menu"
+              onClick={() => setMenu(false)}
+            >
+              <X />
+            </button>
+            <div className="nav-eyebrow">VOTRE ESPACE</div>
+            <nav aria-label="Navigation principale">
+              {tabs.map(({ id, label, Icon }) => (
+                <a
+                  href={`#${id}`}
+                  key={id}
+                  className={`nav-item ${page === id || (inLesson && id === "today") ? "active" : ""}`}
+                  aria-current={page === id ? "page" : undefined}
+                  onClick={() => setMenu(false)}
                 >
-                  Revenir à l’accueil
-                  <ArrowRight size={17} />
+                  <Icon size={21} strokeWidth={1.8} />
+                  <span>{label}</span>
+                  {id === "review" && state.review.due > 0 && (
+                    <span className="nav-count">{state.review.due}</span>
+                  )}
+                </a>
+              ))}
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="sidebar-premium">
+                <span className="premium-icon">
+                  <Sparkles size={22} />
+                </span>
+                <span className="eyebrow small">
+                  ET SI ON ALLAIT PLUS LOIN ?
+                </span>
+                <h3>
+                  La curiosité
+                  <br />
+                  n’a pas de limites.
+                </h3>
+                <p>
+                  Votre bilan et un atelier
+                  <br />
+                  pour pratiquer avec l’IA.
+                </p>
+                <button onClick={() => setPremium(true)}>
+                  Parlio Premium
+                  <ArrowUpRight size={16} />
                 </button>
               </div>
-            )}
-          </main>
-          <nav className="mobile-nav" aria-label="Navigation mobile">
-            {tabs.map(({ id, label, Icon }) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                aria-current={page === id ? "page" : undefined}
-                className={page === id ? "active" : ""}
-              >
-                <Icon size={21} />
-                <span>{label.replace("Mon ", "").replace("Mes ", "")}</span>
-                {id === "review" && state.review.due > 0 && <i />}
-              </a>
-            ))}
-          </nav>
+              <button className="help-button" onClick={() => setHelp(true)}>
+                <CircleHelp size={18} />
+                <span>Un petit coup de pouce ?</span>
+                <ArrowUpRight size={14} />
+              </button>
+              <span className="sidebar-copyright">
+                Fait pour apprendre. À votre rythme.
+              </span>
+            </div>
+          </aside>
+          {menu && (
+            <button
+              className="menu-backdrop"
+              aria-label="Fermer le menu"
+              onClick={() => setMenu(false)}
+            />
+          )}
+          <div className="main-shell">
+            <header className="topbar">
+              <div className="topbar-left">
+                <button
+                  className="icon-button mobile-menu"
+                  onClick={() => setMenu(true)}
+                  aria-label="Ouvrir le menu"
+                >
+                  <Menu size={23} />
+                </button>
+                <span className="topbar-message">
+                  Votre rendez-vous avec les langues
+                  <span className="coral-text">.</span>
+                </span>
+                <span className="mobile-brand">
+                  <Brand small />
+                </span>
+              </div>
+              <div className="topbar-actions">
+                <button
+                  className="language-button"
+                  onClick={() => setLanguage(true)}
+                  aria-label={`Langue apprise : ${selectedCourse.name.toLowerCase()}`}
+                >
+                  <span className="uk-flag" aria-hidden="true">
+                    {selectedCourse.flag}
+                  </span>
+                  <span>{selectedCourse.name}</span>
+                  <ChevronDown size={14} />
+                </button>
+                <span className="topbar-divider" />
+                <button
+                  className="header-stat streak-stat"
+                  onClick={() => navigate("profile")}
+                  aria-label={`${state.stats.streak} jours de série`}
+                >
+                  <Flame size={20} fill="#f5d6bc" />
+                  <strong>{state.stats.streak}</strong>
+                </button>
+                <button
+                  className="header-stat xp-stat"
+                  onClick={() => navigate("profile")}
+                  aria-label={`${state.stats.xp} points d’expérience`}
+                >
+                  <Zap size={20} fill="#f4d16f" />
+                  <strong>
+                    {state.stats.xp}
+                    <span> XP</span>
+                  </strong>
+                </button>
+                <button
+                  className="header-avatar"
+                  onClick={() => navigate("profile")}
+                  aria-label="Ouvrir mon profil"
+                >
+                  {state.user.guest ? (
+                    <UserRound size={20} />
+                  ) : (
+                    state.user.name[0].toUpperCase()
+                  )}
+                </button>
+              </div>
+            </header>
+            <main
+              id="main"
+              tabIndex={-1}
+              className={`main-content ${inLesson ? "in-lesson" : ""}`}
+            >
+              {inLesson ? (
+                <Lesson id={page.slice(7)} />
+              ) : page === "path" ? (
+                <Path />
+              ) : page === "review" ? (
+                <Review />
+              ) : page === "profile" ? (
+                <Profile />
+              ) : page === "tutor" ? (
+                <Tutor key={`${state.user.id}:${state.preferences.courseId}`} />
+              ) : page === "insights" ? (
+                <Insights
+                  key={`${state.user.id}:${state.preferences.courseId}`}
+                />
+              ) : page === "premium" ? (
+                <div className="premium-page card">
+                  <h1>Votre abonnement Parlio</h1>
+                  <PremiumContent />
+                </div>
+              ) : page === "today" ? (
+                <Dashboard />
+              ) : (
+                <div className="empty-state card">
+                  <Route size={34} />
+                  <h1>Un petit détour ?</h1>
+                  <p>Cette page n’existe pas. Votre parcours vous attend.</p>
+                  <button
+                    className="button primary"
+                    onClick={() => navigate("today")}
+                  >
+                    Revenir à l’accueil
+                    <ArrowRight size={17} />
+                  </button>
+                </div>
+              )}
+            </main>
+            <nav className="mobile-nav" aria-label="Navigation mobile">
+              {tabs.map(({ id, label, Icon }) => (
+                <a
+                  key={id}
+                  href={`#${id}`}
+                  aria-current={page === id ? "page" : undefined}
+                  className={page === id ? "active" : ""}
+                >
+                  <Icon size={21} />
+                  <span>{label.replace("Mon ", "").replace("Mes ", "")}</span>
+                  {id === "review" && state.review.due > 0 && <i />}
+                </a>
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>
+      )}
       {error && (
         <div className="toast" role="alert">
           <CircleHelp size={20} />
@@ -358,18 +390,50 @@ export default function App() {
       {premium && <Premium onClose={() => setPremium(false)} />}
       {language && (
         <Modal
-          title="L’anglais, pour commencer."
+          title="Votre prochaine langue"
           onClose={() => setLanguage(false)}
         >
-          <div className="language-modal">
-            <span className="big-flag">🇬🇧</span>
-            <h3>De premiers mots en nouvelles rencontres.</h3>
-            <p>
-              Votre parcours d’anglais débutant comprend 6 unités et 18 leçons,
-              avec des consignes en français. D’autres langues pourront
-              rejoindre l’aventure plus tard.
-            </p>
-            <span className="level-tag">Français → Anglais débutant</span>
+          <p className="modal-description">
+            Chaque langue garde son parcours, vos leçons et vos révisions. Les
+            consignes restent en français.
+          </p>
+          <div className="language-selector">
+            {courses.map((course) => {
+              const progress = state.courseProgress.find(
+                (item) => item.id === course.id,
+              )!;
+              return (
+                <button
+                  key={course.id}
+                  aria-pressed={state.preferences.courseId === course.id}
+                  onClick={() =>
+                    void changePreferences({ courseId: course.id }).then(
+                      (ok) => {
+                        if (ok) {
+                          setLanguage(false);
+                          if (inLesson) navigate("today");
+                        }
+                      },
+                    )
+                  }
+                >
+                  <span className="big-flag" aria-hidden="true">
+                    {course.flag}
+                  </span>
+                  <span>
+                    <strong>{course.name}</strong>
+                    <small>
+                      Débutant · {progress.completed} / {progress.total} leçons
+                    </small>
+                  </span>
+                  {state.preferences.courseId === course.id ? (
+                    <span className="level-tag">En cours</span>
+                  ) : (
+                    <ArrowRight size={18} />
+                  )}
+                </button>
+              );
+            })}
           </div>
           <button
             className="button primary full-width"

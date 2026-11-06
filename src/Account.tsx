@@ -9,7 +9,6 @@ import {
   Sprout,
   BookOpen,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { api } from "./api";
 import { useApp } from "./context";
@@ -65,7 +64,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
             Un nouveau monde.
           </h2>
           <p>
-            L’anglais commence avec vous.
+            Votre apprentissage commence avec vous.
             <br />
             On trouve votre rythme ?
           </p>
@@ -274,7 +273,7 @@ export function Auth({
         </span>
         <p>
           {mode === "register"
-            ? "Un compte gratuit pour retrouver votre anglais, où que vous soyez. Votre progression d’essai sera automatiquement conservée."
+            ? "Un compte gratuit pour retrouver vos langues, où que vous soyez. Votre progression d’essai sera automatiquement conservée."
             : "Connectez-vous pour reprendre votre parcours et vos révisions."}
         </p>
       </div>
@@ -363,62 +362,6 @@ export function Auth({
         Aucune publicité. Votre compte et vos données peuvent être supprimés
         dans votre profil.
       </p>
-    </Modal>
-  );
-}
-export function Premium({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal title="Un jour, encore plus loin." onClose={onClose}>
-      <div className="premium-intro">
-        <span className="premium-emblem">
-          <Sparkles size={30} />
-        </span>
-        <span className="coming-label">EN PRÉPARATION</span>
-        <h3>Parlio, avec un petit plus.</h3>
-        <p>
-          Les 18 leçons, les révisions et la sauvegarde du parcours sont
-          gratuites. Une offre Premium est à l’étude pour la suite.
-        </p>
-      </div>
-      <ul className="premium-list">
-        <li>
-          <Check size={17} />
-          Des statistiques plus détaillées
-        </li>
-        <li>
-          <Check size={17} />
-          Des parcours thématiques supplémentaires
-        </li>
-        <li>
-          <Check size={17} />
-          Des révisions personnalisées avancées
-        </li>
-        <li>
-          <Check size={17} />À terme, des conversations avec une IA
-        </li>
-      </ul>
-      <div className="pricing-options">
-        <div>
-          <span>Au mois</span>
-          <strong>
-            6,99 €<small> / mois</small>
-          </strong>
-        </div>
-        <div>
-          <span>À l’année</span>
-          <strong>
-            49,99 €<small> / an</small>
-          </strong>
-        </div>
-      </div>
-      <p className="fine-print">
-        Tarifs indicatifs et modifiables. Cette offre n’est pas commercialisée.
-        Aucun paiement ni abonnement n’est activé.
-      </p>
-      <button className="button primary full-width" onClick={onClose}>
-        Continuer gratuitement
-        <ArrowRight size={18} />
-      </button>
     </Modal>
   );
 }
