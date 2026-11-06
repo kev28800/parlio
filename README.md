@@ -1,6 +1,6 @@
 # Parlio
 
-**Un petit pas, un nouveau monde.** Apprentissage de l’anglais, de l’espagnol et de l’allemand pour francophones. Accueil éditorial, leçons de cinq minutes et révisions espacées.
+**Un petit pas, un nouveau monde.** Apprentissage de l’anglais, de l’espagnol et de l’allemand pour francophones. Univers sombre et coloré, menu de jeu, leçons de cinq minutes et révisions espacées.
 
 ## Lancer l’application
 
@@ -26,6 +26,9 @@ Le serveur de production est compilé dans `build/server/index.mjs`, sans dépen
 [Déploiement](DEPLOIEMENT.md) · [Activation Stripe de test et tuteur IA](ACTIVATION.md)
 
 ## Fonctions
+
+- Camp de base avec accès à l’aventure, aux révisions, à la collection et au tuteur. Les trois langues sont des mondes dont la progression reste indépendante.
+- Carte des six unités avec niveaux verrouillés ou disponibles, étoiles correspondant aux leçons terminées, missions quotidiennes calculées sur les séances réelles. Un niveau de jeu correspond à 120 XP ; il ne représente pas une certification linguistique.
 
 - Trois parcours indépendants : **6 unités × 3 leçons × 8 exercices par langue**, soit **54 leçons et 432 exercices**. Les identifiants et progrès anglais de la version précédente restent compatibles.
 - Six formats : choix, paires, reconstruction, mot manquant, écrit et écoute. Consignes et explications en français ; variantes acceptées explicitement.
@@ -80,7 +83,9 @@ api/index.ts                   # Entrée Vercel
 src/
   Website.tsx, site.css         # Accueil public et direction visuelle
   App.tsx, curriculum.ts        # Navigation, état, choix de langue
-  Dashboard.tsx, Views.tsx      # Apprentissage, révisions et profil
+  Dashboard.tsx, Views.tsx      # Niveaux, révisions et profil
+  GameHub.tsx, WorldPicker.tsx  # Menu de jeu, missions et choix des mondes
+  game.css                     # Thème sombre, couleurs et adaptation mobile
   Lesson.tsx                   # Exercices, audio et bilan
   Premium.tsx, Insights.tsx     # Paiement de test et bilan
   Tutor.tsx                    # Conversation et pratique IA

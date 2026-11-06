@@ -36,6 +36,10 @@ test("l’accueil présente les trois langues et un véritable aperçu sans attr
     .click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Hallo");
   await expect(
+    page.getByRole("navigation", { name: "Menu des modes de jeu" }),
+  ).toBeVisible();
+  await expect(page.locator(".quest-count")).toHaveText("0/3");
+  await expect(
     page.getByRole("button", { name: "Langue apprise : allemand" }),
   ).toBeVisible();
   await page
@@ -59,6 +63,61 @@ test("l’accueil présente les trois langues et un véritable aperçu sans attr
     .click();
   await page.getByRole("button", { name: "Reprendre ma leçon" }).click();
   await expect(page.locator(".exercise-feedback")).toContainText("Hallo");
+});
+
+test("le menu de jeu permet de naviguer et de changer de monde sur mobile au clavier", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#today");
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await page
+    .getByRole("button", { name: "C’est parti !", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Apprendre l’espagnol", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Hola");
+  await page
+    .getByRole("navigation", { name: "Menu des modes de jeu" })
+    .getByRole("link", { name: /Carte de l’aventure/ })
+    .click();
+  await expect(page.locator(".game-map .path-unit")).toHaveCount(6);
+  await expect(
+    page.getByRole("button", { name: "Commencer ¡Hola, vous !", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Verrouillée : Enchanté !", exact: true }),
+  ).toBeDisabled();
+  const menu = page.getByRole("button", {
+    name: "Ouvrir le menu",
+    exact: true,
+  });
+  await menu.click();
+  await expect(menu).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page
+      .locator("#player-menu")
+      .getByRole("button", { name: "Fermer le menu", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await expect(menu).toBeFocused();
+  await menu.click();
+  await page
+    .getByRole("navigation", { name: "Navigation principale" })
+    .getByRole("link", { name: "Mes révisions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Un carnet encore tout neuf." }),
+  ).toBeVisible();
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });
 test("l’accueil, le choix des langues et les espaces IA et Premium sont accessibles sur ordinateur et mobile", async ({
   page,

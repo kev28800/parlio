@@ -6,9 +6,11 @@ import {
   Check,
   ChevronDown,
   Globe2,
-  MoveUpRight,
   RotateCcw,
   Sparkles,
+  Play,
+  Gamepad2,
+  Map,
 } from "lucide-react";
 import { courses, getCourse } from "../shared/courses";
 import { grade } from "../shared/learning";
@@ -16,6 +18,7 @@ import { premiumPlans } from "../shared/billing";
 import type { CourseId } from "../shared/types";
 import { useApp } from "./context";
 import { Brand, Modal } from "./ui";
+import WorldPicker from "./WorldPicker";
 
 export default function Website() {
   const { state, changePreferences, navigate, openAuth } = useApp();
@@ -52,10 +55,14 @@ export default function Website() {
         </a>
         <nav aria-label="Découvrir Parlio">
           <button onClick={() => scrollTo("site-languages")}>
-            Les langues
+            <Map size={15} /> Les mondes
           </button>
-          <button onClick={() => scrollTo("site-method")}>La méthode</button>
-          <button onClick={() => scrollTo("site-pricing")}>Les formules</button>
+          <button onClick={() => scrollTo("site-method")}>
+            <Gamepad2 size={15} /> Comment jouer
+          </button>
+          <button onClick={() => scrollTo("site-pricing")}>
+            <Sparkles size={15} /> Premium
+          </button>
         </nav>
         <div className="site-header-actions">
           <button
@@ -79,19 +86,19 @@ export default function Website() {
         <section className="site-hero">
           <div className="site-hero-copy">
             <div className="editorial-eyebrow">
-              <span /> LES LANGUES OUVRENT LE MONDE
+              <Gamepad2 size={16} /> APPRENDRE DEVIENT UNE AVENTURE
             </div>
             <h1>
               De nouveaux mots.
               <br />
               <em>
-                De nouveaux
-                <br className="desktop-break" /> horizons.
+                Un monde
+                <br className="desktop-break" /> à débloquer.
               </em>
             </h1>
             <p>
-              L’anglais, l’espagnol ou l’allemand. Quelques minutes par jour. Et
-              le plaisir de trouver vos mots, simplement.
+              Choisissez votre langue. Lancez une leçon. Avancez de niveau en
+              niveau, à votre rythme, en anglais, espagnol ou allemand.
             </p>
             <div className="site-hero-actions">
               <button
@@ -99,7 +106,8 @@ export default function Website() {
                 disabled={busy}
                 onClick={() => void start()}
               >
-                Commencer gratuitement <ArrowUpRight size={18} />
+                <Play size={17} fill="currentColor" /> Commencer gratuitement{" "}
+                <ArrowUpRight size={18} />
               </button>
               <span>
                 Sans carte bancaire.
@@ -110,7 +118,7 @@ export default function Website() {
               className="site-discover"
               onClick={() => scrollTo("site-languages")}
             >
-              <span>01 — CHOISIR SA PROCHAINE DESTINATION</span>
+              <span>CHOISIR MON PREMIER MONDE</span>
               <ChevronDown size={16} />
             </button>
           </div>
@@ -118,15 +126,17 @@ export default function Website() {
             <div className="hero-orbit" aria-hidden="true">
               <Globe2 />
               <span>
-                LE MONDE COMMENCE
+                CHAQUE MOT EST
                 <br />
-                PAR UNE RENCONTRE.
+                UNE NOUVELLE VICTOIRE.
               </span>
             </div>
             <div className="practice-paper">
               <div className="paper-top">
-                <span>VOTRE PREMIER PAS</span>
-                <span>01 / 08</span>
+                <span>
+                  <Gamepad2 size={14} /> MISSION DÉCOUVERTE
+                </span>
+                <span>APERÇU</span>
               </div>
               <div
                 className="sample-language"
@@ -144,7 +154,7 @@ export default function Website() {
                   </button>
                 ))}
               </div>
-              <span className="paper-caption">Comment dit-on…</span>
+              <span className="paper-caption">Trouvez le sens du mot</span>
               <p className="sample-word" lang={language.id}>
                 {sample.prompt}
                 <span>?</span>
@@ -211,7 +221,7 @@ export default function Website() {
           </div>
         </section>
         <div className="site-proof">
-          <p>Un apprentissage qui trouve sa place dans votre quotidien.</p>
+          <p>Une petite partie. Un vrai pas en avant.</p>
           <span>
             <BookOpen size={17} /> 18 leçons par langue
           </span>
@@ -224,50 +234,20 @@ export default function Website() {
         </div>
         <section id="site-languages" className="site-section languages-section">
           <div className="section-editorial">
-            <span className="editorial-eyebrow">01 / LES LANGUES</span>
+            <span className="editorial-eyebrow">
+              <Map size={15} /> CHOISIR SON AVENTURE
+            </span>
             <h2>
-              Où votre curiosité
+              Trois langues.
               <br />
-              <em>vous emmène-t-elle ?</em>
+              <em>Trois mondes à explorer.</em>
             </h2>
             <p>
               Trois parcours pour commencer. Changez de langue quand vous le
               souhaitez : vos acquis vous suivent.
             </p>
           </div>
-          <div className="site-language-grid">
-            {courses.map((course, index) => (
-              <article
-                className={`site-language-card language-${course.id}`}
-                key={course.id}
-              >
-                <div className="language-card-top">
-                  <span>PARCOURS {String(index + 1).padStart(2, "0")}</span>
-                  <span aria-hidden="true">{course.flag}</span>
-                </div>
-                <div className="language-greeting" lang={course.id}>
-                  {course.id === "de"
-                    ? "Hallo."
-                    : course.id === "en"
-                      ? "Hello."
-                      : "Hola."}
-                </div>
-                <div className="language-card-bottom">
-                  <div>
-                    <h3>{course.name}</h3>
-                    <p>Débutant · 6 unités · 144 exercices</p>
-                  </div>
-                  <button
-                    onClick={() => void start(course.id)}
-                    disabled={busy}
-                    aria-label={`Apprendre l’${course.name.toLowerCase()}`}
-                  >
-                    <MoveUpRight size={23} />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <WorldPicker onChoose={(id) => void start(id)} busy={busy} />
         </section>
         <section id="site-method" className="site-section method-section">
           <div className="section-editorial">

@@ -35,7 +35,10 @@ export function Brand({ small = false }: { small?: boolean }) {
           d="M7 4h15c11 0 17 6 17 15S32 33 22 33h-6l-9 9V4Z"
           fill="currentColor"
         />
-        <path d="M17 12v13h6c5 0 8-2 8-7s-3-6-8-6h-6Z" fill="#f8f9f5" />
+        <path
+          d="M17 12v13h6c5 0 8-2 8-7s-3-6-8-6h-6Z"
+          fill="var(--brand-cutout, #f8f9f5)"
+        />
       </svg>
       <span>
         parlio<span className="brand-dot">.</span>

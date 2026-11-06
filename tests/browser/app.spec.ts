@@ -119,6 +119,9 @@ test("une leçon complète, six formats, erreur, reprise, compte et persistance"
   await expect(
     page.getByRole("heading", { name: /Hello, Camille/ }),
   ).toBeVisible();
+  await expect(page.locator(".quest-count")).toHaveText("2/3");
+  await expect(page.locator(".player-rank")).toContainText("55 / 120 XP");
+  await expect(page.locator(".game-total-xp")).toContainText("55");
   await page
     .getByRole("navigation", { name: "Navigation principale" })
     .getByRole("link", { name: "Mon parcours" })

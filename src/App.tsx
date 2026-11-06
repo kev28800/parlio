@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  House,
   Route,
   RotateCcw,
   UserRound,
@@ -17,6 +16,9 @@ import {
   Leaf,
   MessageCircle,
   BarChart3,
+  Gamepad2,
+  Map,
+  Trophy,
 } from "lucide-react";
 import { courses, getCourse } from "../shared/courses";
 import type { AppState, Preferences, RunView } from "../shared/types";
@@ -33,12 +35,48 @@ import Insights from "./Insights";
 import Lesson from "./Lesson";
 
 const tabs = [
-  { id: "today", label: "Aujourd’hui", Icon: House },
-  { id: "path", label: "Mon parcours", Icon: Route },
-  { id: "review", label: "Mes révisions", Icon: RotateCcw },
-  { id: "tutor", label: "Atelier IA", Icon: MessageCircle },
-  { id: "insights", label: "Mon bilan", Icon: BarChart3 },
-  { id: "profile", label: "Mon profil", Icon: UserRound },
+  {
+    id: "today",
+    label: "Aujourd’hui",
+    caption: "Camp de base",
+    Icon: Gamepad2,
+    tone: "purple",
+  },
+  {
+    id: "path",
+    label: "Mon parcours",
+    caption: "Carte de l’aventure",
+    Icon: Map,
+    tone: "blue",
+  },
+  {
+    id: "review",
+    label: "Mes révisions",
+    caption: "Entraînement",
+    Icon: RotateCcw,
+    tone: "mint",
+  },
+  {
+    id: "tutor",
+    label: "Atelier IA",
+    caption: "Salon du tuteur",
+    Icon: MessageCircle,
+    tone: "pink",
+  },
+  {
+    id: "insights",
+    label: "Mon bilan",
+    caption: "Tableau de progression",
+    Icon: BarChart3,
+    tone: "orange",
+  },
+  {
+    id: "profile",
+    label: "Mon profil",
+    caption: "Badges et réglages",
+    Icon: Trophy,
+    tone: "yellow",
+  },
 ];
 const readPage = () => window.location.hash.slice(1).split("?")[0] || "welcome";
 export default function App() {
@@ -53,6 +91,11 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [language, setLanguage] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [mobileNavigation, setMobileNavigation] = useState(
+    () => window.matchMedia("(max-width: 760px)").matches,
+  );
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeMenuRef = useRef<HTMLButtonElement>(null);
   const onboardingDismissed = useRef(new Set<string>());
   async function load() {
     setLoadError("");
@@ -63,11 +106,52 @@ export default function App() {
     }
   }
   useEffect(() => {
+    const query = window.matchMedia("(max-width: 760px)");
+    const changed = () => {
+      setMobileNavigation(query.matches);
+      if (!query.matches) setMenu(false);
+    };
+    query.addEventListener("change", changed);
+    return () => query.removeEventListener("change", changed);
+  }, []);
+  useEffect(() => {
+    if (!menu || !mobileNavigation) return;
+    closeMenuRef.current?.focus();
+    const escape = (event: KeyboardEvent) => {
+      if (document.querySelector("dialog[open]")) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePlayerMenu();
+      }
+      if (event.key === "Tab") {
+        const nodes = [
+          ...document.querySelectorAll<HTMLElement>(
+            "#player-menu a[href], #player-menu button:not(:disabled)",
+          ),
+        ].filter((node) => node.getClientRects().length > 0);
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [menu, mobileNavigation]);
+  useEffect(() => {
     void load();
     const listener = () => {
       setPage(readPage());
       setMenu(false);
       window.scrollTo({ top: 0, behavior: "instant" });
+      requestAnimationFrame(() =>
+        document.getElementById("main")?.focus({ preventScroll: true }),
+      );
     };
     window.addEventListener("hashchange", listener);
     return () => window.removeEventListener("hashchange", listener);
@@ -94,6 +178,10 @@ export default function App() {
   function navigate(destination: string) {
     window.location.hash = destination;
     setMenu(false);
+  }
+  function closePlayerMenu() {
+    setMenu(false);
+    requestAnimationFrame(() => menuButtonRef.current?.focus());
   }
   async function startLesson(id: string) {
     setBusy(true);
@@ -179,7 +267,11 @@ export default function App() {
         <Website />
       ) : (
         <div className="app-shell">
-          <aside className={`sidebar ${menu ? "open" : ""}`}>
+          <aside
+            id="player-menu"
+            inert={mobileNavigation && !menu}
+            className={`sidebar ${menu ? "open" : ""}`}
+          >
             <button
               className="logo-button"
               onClick={() => navigate("welcome")}
@@ -188,27 +280,34 @@ export default function App() {
               <Brand />
             </button>
             <span className="brand-caption">
-              UN PETIT PAS, UN NOUVEAU MONDE.
+              LA LANGUE EST VOTRE TERRAIN DE JEU.
             </span>
             <button
               className="icon-button sidebar-close"
+              ref={closeMenuRef}
               aria-label="Fermer le menu"
-              onClick={() => setMenu(false)}
+              onClick={closePlayerMenu}
             >
               <X />
             </button>
-            <div className="nav-eyebrow">VOTRE ESPACE</div>
+            <div className="nav-eyebrow">MENU DU JOUEUR</div>
             <nav aria-label="Navigation principale">
-              {tabs.map(({ id, label, Icon }) => (
+              {tabs.map(({ id, label, caption, Icon, tone }) => (
                 <a
                   href={`#${id}`}
                   key={id}
-                  className={`nav-item ${page === id || (inLesson && id === "today") ? "active" : ""}`}
+                  className={`nav-item nav-${tone} ${page === id || (inLesson && id === "today") ? "active" : ""}`}
+                  aria-label={label}
                   aria-current={page === id ? "page" : undefined}
                   onClick={() => setMenu(false)}
                 >
-                  <Icon size={21} strokeWidth={1.8} />
-                  <span>{label}</span>
+                  <span className="nav-game-icon">
+                    <Icon size={21} strokeWidth={1.8} />
+                  </span>
+                  <span className="nav-game-text">
+                    <strong>{label}</strong>
+                    <small>{caption}</small>
+                  </span>
                   {id === "review" && state.review.due > 0 && (
                     <span className="nav-count">{state.review.due}</span>
                   )}
@@ -252,7 +351,7 @@ export default function App() {
             <button
               className="menu-backdrop"
               aria-label="Fermer le menu"
-              onClick={() => setMenu(false)}
+              onClick={closePlayerMenu}
             />
           )}
           <div className="main-shell">
@@ -260,13 +359,16 @@ export default function App() {
               <div className="topbar-left">
                 <button
                   className="icon-button mobile-menu"
+                  ref={menuButtonRef}
                   onClick={() => setMenu(true)}
                   aria-label="Ouvrir le menu"
+                  aria-expanded={menu}
+                  aria-controls="player-menu"
                 >
                   <Menu size={23} />
                 </button>
                 <span className="topbar-message">
-                  Votre rendez-vous avec les langues
+                  <Gamepad2 size={16} /> L’aventure continue
                   <span className="coral-text">.</span>
                 </span>
                 <span className="mobile-brand">

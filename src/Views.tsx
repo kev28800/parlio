@@ -35,11 +35,11 @@ export function Path() {
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow small">LA SUITE VOUS APPARTIENT</div>
+          <div className="eyebrow small">LA CARTE DE VOTRE AVENTURE</div>
           <h1>
             Un mot après l’autre<span className="coral-text">.</span>
           </h1>
-          <p>{language.name} · Six unités pour vos premiers échanges.</p>
+          <p>{language.name} · Six étapes, un niveau après l’autre.</p>
         </div>
         <span className="progress-label">
           <BookOpen size={17} />
@@ -49,7 +49,7 @@ export function Path() {
       <div className="course-progress">
         <span style={{ width: `${(state.completed.length / 18) * 100}%` }} />
       </div>
-      <div className="course-list">
+      <div className="course-list game-map">
         {course.map((unit, i) => {
           const Icon = unitIcons[unit.icon];
           const done = unit.lessons.filter((l) =>
@@ -62,6 +62,22 @@ export function Path() {
               className={`path-unit card ${!available ? "unavailable" : ""}`}
               key={unit.id}
             >
+              <div className="map-chapter">
+                <span>ZONE {String(i + 1).padStart(2, "0")}</span>
+                <span
+                  className="map-stars"
+                  aria-label={`${done} leçons terminées sur 3`}
+                >
+                  {[1, 2, 3].map((star) => (
+                    <span
+                      key={star}
+                      className={done >= star ? "star-earned" : ""}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </span>
+              </div>
               <div className="unit-summary">
                 <div className={`unit-symbol ${unit.color}`}>
                   <Icon size={28} />
