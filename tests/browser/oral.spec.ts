@@ -99,7 +99,7 @@ test("Pip lit la bonne langue et ne démarre le micro qu’après consentement e
   ).toBeVisible();
   await expect(page.locator(".pip-interactive")).toHaveAttribute(
     "data-renderer",
-    /3d|2d/,
+    /layered|2d/,
   );
   expect(await page.evaluate(() => (window as any).__voice.starts)).toBe(0);
   await expect(
@@ -307,13 +307,13 @@ test("une transcription IA est relue puis envoyée explicitement ; Pip lit la r�
   expect(sent).toBe(1);
 });
 
-test("le renard 3D articule seulement pendant la voix, réagit au coucou et respecte la pause", async ({
+test("le renard semi-réaliste articule seulement pendant la voix, réagit au coucou et respecte la pause", async ({
   page,
 }) => {
   await voices(page);
   await page.goto("/#tutor");
   const pip = page.locator(".pip-interactive");
-  await expect(pip).toHaveAttribute("data-renderer", "3d");
+  await expect(pip).toHaveAttribute("data-renderer", "layered");
   await expect(pip.locator("canvas")).toBeVisible();
   await page.evaluate(() => {
     (window as any).__voice.autoStart = false;
@@ -399,8 +399,8 @@ test("sans WebGL Pip reste animé ; la réduction des mouvements fige aussi le p
   });
   await page.goto("/#tutor");
   const pip = page.locator(".pip-interactive");
-  await expect(pip).toHaveAttribute("data-renderer", "2d");
-  await expect(pip.locator("svg")).toBeVisible();
+  await expect(pip).toHaveAttribute("data-renderer", "layered");
+  await expect(pip.locator("canvas")).toBeVisible();
   await page.getByRole("button", { name: "Faire coucou", exact: true }).click();
   await expect(pip).toHaveAttribute("data-gesture", "wave");
   await page.getByRole("button", { name: "Écouter Pip", exact: true }).click();

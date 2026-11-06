@@ -115,7 +115,7 @@
 }
 .pip-stage-floor {
   position: absolute;
-  top: 310px;
+  top: 323px;
   height: 27px;
   width: 180px;
   background: radial-gradient(ellipse, #a981dd, #46336d 75%);
@@ -600,7 +600,8 @@
   touch-action: pan-y;
 }
 .pip-interactive > canvas,
-.pip-interactive > .pip-puppet {
+.pip-interactive > .pip-puppet,
+.pip-interactive > .pip-rest-poster {
   display: block;
   width: 100%;
   height: 100%;
@@ -611,10 +612,10 @@
 .pip-interactive > canvas {
   opacity: 0;
 }
-.pip-interactive[data-renderer="3d"] > canvas {
+.pip-interactive[data-renderer="layered"] > canvas {
   opacity: 1;
 }
-.pip-interactive[data-renderer="3d"] > .pip-puppet {
+.pip-interactive[data-renderer="layered"] > .pip-puppet {
   visibility: hidden;
 }
 .pip-puppet {

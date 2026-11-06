@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Hand, Pause, Play } from "lucide-react";
 import { mouthPose, type SpeechCue } from "./pipSpeech";
-import type { PipPose } from "./pipScene";
+import { createNaturalMotion, type PipPose } from "./pipMotion";
 
 function Puppet() {
   return (
@@ -138,7 +138,7 @@ export default function PipAvatar({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [mode, setMode] = useState<"loading" | "3d" | "2d">("loading");
+  const [mode, setMode] = useState<"loading" | "layered" | "2d">("loading");
   const [paused, setPaused] = useState(false);
   const [systemReduced, setSystemReduced] = useState(false);
   const waveAt = useRef(-1);
@@ -164,6 +164,7 @@ export default function PipAvatar({
   useEffect(() => {
     const element = container.current!;
     const surface = canvas.current!;
+    const fallbackMotion = createNaturalMotion();
     let active = true,
       visible = true,
       frameId = 0,
@@ -205,42 +206,24 @@ export default function PipAvatar({
         useFallback();
       }
       if (!scene) {
-        const motion = pose.still ? 0 : 1;
-        const blink = pose.still
-          ? 1
-          : Math.max(
-              0.04,
-              1 - Math.exp(-Math.pow(((age % 4.7) - 4.22) / 0.085, 2)),
-            );
-        element.style.setProperty(
-          "--pip-mouth",
-          String(pose.still ? 0 : mouth.open),
-        );
+        const motion = fallbackMotion(pose);
+        const blink = motion.blink;
+        element.style.setProperty("--pip-mouth", String(motion.open));
         element.style.setProperty("--pip-blink", String(blink));
         element.style.setProperty(
           "--pip-head",
-          `${(pose.listening ? -6 : gaze.current.x * 5 + Math.sin(age) * 1.2) * motion}deg`,
+          `${motion.headTilt * -57.3 + motion.headYaw * 20}deg`,
         );
-        element.style.setProperty(
-          "--pip-tail",
-          `${Math.sin(age * 1.4) * 5 * motion}deg`,
-        );
-        element.style.setProperty(
-          "--pip-breathe",
-          `${1 + Math.sin(age * 1.65) * 0.012 * motion}`,
-        );
-        const wave =
-          pose.wave >= 0 && pose.wave < 2.4
-            ? Math.sin((pose.wave / 2.4) * Math.PI)
-            : 0;
+        element.style.setProperty("--pip-tail", `${motion.tailYaw * 35}deg`);
+        element.style.setProperty("--pip-breathe", `${1 + motion.breath}`);
         element.style.setProperty(
           "--pip-wave",
-          `${(-105 * wave + Math.sin(age * 13) * wave * 9) * motion}deg`,
+          `${-motion.shoulder * 57.3}deg`,
         );
         result = {
-          open: pose.still ? 0 : mouth.open,
+          open: motion.open,
           blink,
-          waving: wave > 0.3 && !pose.still,
+          waving: motion.shoulder > 1,
         };
       }
       // Expose the rendered pose for browser checks and diagnostics; no transcript data.
@@ -257,7 +240,7 @@ export default function PipAvatar({
     function lost(event: Event) {
       event.preventDefault();
       // Disposal can emit another loss event; remove the listener first.
-      surface.removeEventListener("webglcontextlost", lost);
+      surface.removeEventListener("contextlost", lost);
       useFallback();
       schedule();
     }
@@ -286,15 +269,20 @@ export default function PipAvatar({
       } else schedule();
     }
     document.addEventListener("visibilitychange", visibility);
-    surface.addEventListener("webglcontextlost", lost);
+    surface.addEventListener("contextlost", lost);
     invalidate.current = schedule;
     import("./pipScene")
-      .then(({ createPipScene }) => {
+      .then(async ({ createPipScene }) => {
         if (!active) return;
         try {
-          scene = createPipScene(surface);
+          const created = await createPipScene(surface);
+          if (!active) {
+            created.dispose();
+            return;
+          }
+          scene = created;
           resize();
-          setMode("3d");
+          setMode("layered");
         } catch {
           useFallback();
         }
@@ -313,7 +301,7 @@ export default function PipAvatar({
       dimensions.disconnect();
       viewport.disconnect();
       document.removeEventListener("visibilitychange", visibility);
-      surface.removeEventListener("webglcontextlost", lost);
+      surface.removeEventListener("contextlost", lost);
       invalidate.current = () => {};
       scene?.dispose();
     };
@@ -347,6 +335,14 @@ export default function PipAvatar({
         }}
       >
         <Puppet />
+        {mode === "loading" && (
+          <img
+            className="pip-rest-poster"
+            src="/images/pip-rest.png"
+            alt=""
+            aria-hidden="true"
+          />
+        )}
         <canvas ref={canvas} aria-hidden="true" />
       </div>
       <div className="pip-interactions">
