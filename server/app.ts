@@ -131,7 +131,7 @@ export async function createApp(
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader(
       "Permissions-Policy",
-      "microphone=(), camera=(), geolocation=()",
+      "microphone=(self), camera=(), geolocation=()",
     );
     if (process.env.NODE_ENV === "production")
       res.setHeader(

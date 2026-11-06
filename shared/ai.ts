@@ -10,6 +10,7 @@ export interface TutorMessage {
   text: string;
   correction?: string;
   nextPrompt?: string;
+  spokenText?: string;
 }
 export interface TutorConversation {
   courseId: CourseId;

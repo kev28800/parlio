@@ -99,6 +99,7 @@ test("le contrôle de santé vérifie la base sans créer d’utilisateur ni de 
       service: "parlio",
     });
     assert.equal(response.headers.get("set-cookie"), null);
+    assert.match(response.headers.get("permissions-policy") ?? "", /microphone=\(self\)/);
   }
   assert.equal(await count(), before);
 });

@@ -9,6 +9,7 @@ const tutor = {
   reply: "Hallo ! Pour te présenter, tu peux dire : Ich bin Alex.",
   correction: "Avec ich, on emploie bin.",
   nextPrompt: "Wie heißt du?",
+  spokenText: "Hallo! Ich bin Pip. Wie heißt du?",
 };
 const practice = {
   exercises: [
@@ -200,9 +201,11 @@ test("les conversations sont privées, séparées par langue, effaçables et les
   assert.equal(reply.data.courseId, "de");
   assert.equal(reply.data.messages.length, 2);
   assert.equal(reply.data.messages[1].text, tutor.reply);
+  assert.equal(reply.data.messages[1].spokenText, tutor.spokenText);
   assert.match(f.captured[0].instructions, /allemand/);
   assert.ok(!f.captured[0].input.includes(a.email));
   assert.ok(!f.captured[0].input.includes("Prénom privé"));
+  assert.match(f.captured[0].instructions, /uniquement du texte transcrit ou écrit/);
   assert.equal((await a.client.request("/api/ai/tutor", input)).status, 200);
   assert.equal(f.calls(), 1);
   assert.equal(

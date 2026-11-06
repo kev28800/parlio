@@ -8,6 +8,7 @@ import {
   Send,
   Sparkles,
   Trash2,
+  Volume2,
 } from "lucide-react";
 import type { RunView } from "../shared/types";
 import type { TutorConversation } from "../shared/ai";
@@ -15,6 +16,7 @@ import { useApp } from "./context";
 import { useCurriculum } from "./curriculum";
 import { api } from "./api";
 import { Spinner } from "./ui";
+import OralAvatar, { type ReadRequest } from "./OralAvatar";
 
 export default function Tutor() {
   const { state, navigate, openAuth, reportError } = useApp();
@@ -28,6 +30,8 @@ export default function Tutor() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [readRequest, setReadRequest] = useState<ReadRequest | null>(null);
+  const readSequence = useRef(0);
   const request = useRef<{ id: string; message: string } | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   const premium = state.billing.membership.premium && !state.user.guest;
@@ -51,7 +55,8 @@ export default function Tutor() {
     };
   }, [state.user.id, state.user.guest, language.id]);
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
+    if (conversation?.messages.length || busy)
+      bottom.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
   }, [conversation?.messages.length, busy]);
   async function send() {
     if (busy || !message.trim() || !consent) return;
@@ -111,24 +116,33 @@ export default function Tutor() {
           <h1>
             Les mots prennent vie<span className="coral-text">.</span>
           </h1>
-          <p>Pratiquez un échange. Préparez les suivants.</p>
+          <p>Écoutez Pip, prenez la parole, puis avancez à votre rythme.</p>
         </div>
         <span className="level-tag">
           <Sparkles size={16} />
-          {state.ai.configured ? "Avec l’IA" : "En préparation"}
+          {state.ai.configured ? "Avec l’IA" : "Pratique guidée"}
         </span>
       </div>
+      <OralAvatar
+        key={`${state.user.id}:${language.id}`}
+        courseId={language.id}
+        aiAvailable={available}
+        thinking={busy || generating}
+        onDraft={setMessage}
+        messageDraft={message}
+        readRequest={readRequest}
+      />
       {!available && (
         <section className="atelier-gate card">
           <Sparkles size={26} />
           <h2>
             {!state.ai.configured
-              ? "L’atelier se prépare."
+              ? "La conversation IA se prépare."
               : "Un espace pour aller plus loin."}
           </h2>
           <p>
             {!state.ai.configured
-              ? "Le tuteur et les exercices personnalisés sont prêts à être connectés à un service IA. Ils ne sont pas encore activés sur ce site."
+              ? "La conversation libre et les exercices personnalisés IA ne sont pas encore activés. Vous pouvez déjà pratiquer à l’oral avec Pip en mode guidé, ci-dessus."
               : "Le tuteur et la séance quotidienne sont accessibles avec Premium."}
           </p>
           <div>
@@ -171,6 +185,8 @@ export default function Tutor() {
           </header>
           <div
             className="tutor-conversation"
+            role="log"
+            tabIndex={0}
             aria-label="Conversation avec le tuteur"
             aria-busy={busy}
           >
@@ -220,6 +236,31 @@ export default function Tutor() {
                   {entry.nextPrompt && (
                     <p className="tutor-next">{entry.nextPrompt}</p>
                   )}
+                  {entry.spokenText && (
+                    <p className="tutor-spoken" lang={language.id}>
+                      {entry.spokenText}
+                    </p>
+                  )}
+                  {entry.role === "assistant" &&
+                    (entry.spokenText || entry.nextPrompt) && (
+                      <button
+                        className="tutor-read-aloud text-button"
+                        onClick={() => {
+                          setReadRequest({
+                            id: ++readSequence.current,
+                            text: entry.spokenText || entry.nextPrompt!,
+                          });
+                          document
+                            .getElementById("oral-title")
+                            ?.scrollIntoView({
+                              block: "start",
+                              behavior: "instant",
+                            });
+                        }}
+                      >
+                        <Volume2 size={15} /> Écouter avec Pip
+                      </button>
+                    )}
                 </article>
               ))
             )}

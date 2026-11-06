@@ -37,6 +37,7 @@ Le serveur de production est compilé dans `build/server/index.mjs`, sans dépen
 - XP et série communs aux langues, calculés à partir de séances réelles. Les minutes sont une durée pédagogique indicative, créditée en fin de séance, sans chronométrage.
 - Comptes, transfert de l’essai, connexion, déconnexion, export des progrès de toutes les langues et des conversations, suppression du compte.
 - Objectif de 5, 10 ou 15 minutes, fuseau horaire, audio facultatif, réduction des animations, téléphone et ordinateur, clavier et dialogues natifs.
+- Pip à l’oral : renard illustré en 3D, lecture dans la langue choisie et dictée facultative du navigateur. Pratique guidée accessible sans API IA, avec 36 phrases issues de chaque parcours ; comparaison des textes, sans note de prononciation ni XP. Le micro nécessite un accord et un clic, s’arrête après 20 secondes, en quittant la page ou en passant au clavier. Une transcription IA est relue et envoyée manuellement ; les réponses peuvent être écoutées avec Pip.
 - Premium : Stripe Checkout, notifications signées, droits côté serveur, portail client, bilan par unité et sur trente jours. Prix vérifiés : 10,99 €/mois ou 69,99 €/an. Mode test par défaut ; mode réel conditionné à une configuration explicite et un hébergement commercial. Sans configuration, le paiement est désactivé.
 - Tuteur IA de conversation avec OpenAI Responses, explications en français et exemples dans la langue choisie. Consentement explicite, conversations privées par langue, effacement et quotas persistants. Sans clé, aucune réponse fictive n’est affichée.
 - Séance IA de quatre exercices préparée à la demande, une par langue et journée UTC : format validé, correction côté serveur, reprise et XP idempotents. Ces exercices restent distincts du carnet éditorial.
@@ -117,9 +118,11 @@ Les tests couvrent les cours via l’API, les anciens progrès, la séparation d
 
 Le pilote libSQL utilise une base locale de test : il ne prouve pas une connexion à un compte Turso réel. Playwright utilise Chromium et un serveur indépendant sur **3100**, parcourt les formats et le nouveau site, contrôle les débordements et recherche des violations WCAG 2 A/AA et 2.1 AA avec axe. Ces contrôles ne constituent pas une certification d’accessibilité.
 
+Les tests de Pip simulent les services vocaux du navigateur : consentement et clic avant le micro, refus, délai maximal, arrêt à la navigation, trois langues et envoi manuel vers un modèle simulé. Ils ne valident pas un microphone réel ni la disponibilité d’une voix sur chaque appareil. L’illustration de Pip est animée par l’interface ; elle ne fournit pas une synchronisation des lèvres.
+
 ## Limites
 
-- Synthèse vocale de l’appareil selon la langue choisie ; transcription en secours. Pas de conversation vocale en temps réel ni de score de prononciation.
+- Lecture et dictée selon les fonctions et voix disponibles dans le navigateur, sous HTTPS ; le clavier reste accessible en secours. La dictée peut utiliser le service en ligne du navigateur. Échanges vocaux par tours avec envoi explicite, sans OpenAI Realtime ni score de prononciation.
 - Pas encore de vérification d’e-mail ou de récupération de mot de passe. La limitation des connexions reste en mémoire ; prévoir une limitation partagée pour plusieurs instances.
 - Sauvegardes, restauration, conservation et informations légales à adapter au responsable du service.
 - Paiements réels désactivés par défaut ; activation explicite après configuration de Stripe et de l’hébergement commercial. **Vercel Hobby est réservé à un usage personnel non commercial** : vendre un abonnement nécessite un hébergement adapté et un travail distinct sur les paiements et les obligations du vendeur.

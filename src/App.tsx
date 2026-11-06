@@ -58,8 +58,8 @@ const tabs = [
   },
   {
     id: "tutor",
-    label: "Atelier IA",
-    caption: "Salon du tuteur",
+    label: "Pip à l’oral",
+    caption: "Voix et conversation IA",
     Icon: MessageCircle,
     tone: "pink",
   },

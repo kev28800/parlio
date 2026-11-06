@@ -66,6 +66,14 @@ Sans tous ces réglages, les encaissements restent indisponibles. Les clés de t
 
 Vérifier un achat réel uniquement avec accord explicite sur la transaction. Les tests du dépôt utilisent des fournisseurs simulés et ne débitent aucune carte.
 
+## Pip à l’oral : pratique guidée sans API IA
+
+Ouvrir **Pip à l’oral**, choisir une langue puis **Écouter Pip**. La lecture utilise une voix disponible sur l’appareil. Pour dicter, accepter l’information sur le service vocal puis cliquer sur **Parler à Pip** et autoriser le micro dans le navigateur. La dictée peut être traitée en ligne par ce service ; Parlio ne reçoit pas d’audio brut. Le clavier permet de continuer si la voix, la dictée ou l’autorisation ne sont pas disponibles.
+
+Le site doit utiliser HTTPS ; la politique HTTP autorise `microphone=(self)` sur Vercel, Netlify et le serveur. Aucune capture ne démarre à l’arrivée sur la page. La session s’arrête après 20 secondes, en quittant la page, en changeant de langue ou en passant au clavier. Les phrases guidées viennent des cours et ne nécessitent aucune clé API. La comparaison porte uniquement sur les textes et n’attribue ni score de prononciation ni XP.
+
+Pip est une illustration au rendu 3D animée dans l’interface, sans synchronisation des lèvres. Les voix et la reconnaissance dépendent de l’appareil ; les tests utilisent des services simulés. Vérifier le micro et les trois langues sur les navigateurs ciblés avant d’annoncer leur prise en charge.
+
 ## IA : désactivée et indépendante de ChatGPT Plus
 
 Le tuteur demande une clé et un budget API OpenAI, distincts de ChatGPT Plus. La publication Vercel fixe `PARLIO_AI_GLOBAL_DAILY_LIMIT=0` ; aucun appel payant n’est nécessaire pour les leçons ou le bilan Premium.
@@ -73,6 +81,8 @@ Le tuteur demande une clé et un budget API OpenAI, distincts de ChatGPT Plus. L
 Si un budget est accepté ultérieurement, les réglages sont `PARLIO_AI_API_KEY`, `PARLIO_AI_MODEL` (défaut `gpt-4.1-mini`), `PARLIO_AI_DAILY_LIMIT` (défaut 20) et `PARLIO_AI_GLOBAL_DAILY_LIMIT` (défaut hors Vercel 100). Une limite à zéro désactive l’IA. Les plafonds portent sur le nombre de demandes, pas sur un montant garanti ; configurer les alertes et limites du projet chez le fournisseur.
 
 Le consentement est demandé avant d’envoyer les messages à OpenAI. Dix messages récents au maximum servent de contexte ; prénom et e-mail ne sont pas ajoutés au prompt. Les conversations sont séparées par langue et effaçables, même après la fin de Premium. La séance IA quotidienne est créée à la demande, jamais par une tâche de fond. Ses réponses peuvent comporter des erreurs pédagogiques.
+
+Avec l’IA activée et un compte Premium, le mode **Conversation IA** permet de dicter un message, le relire puis l’envoyer explicitement. Le bouton **Écouter avec Pip** lit le court texte dans la langue apprise ; les explications restent en français. Ce fonctionnement par tours n’utilise pas OpenAI Realtime et ne juge pas la prononciation.
 
 ## Limites restantes
 

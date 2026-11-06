@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles.css";
 import "./site.css";
 import "./game.css";
+import "./oral.css";
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

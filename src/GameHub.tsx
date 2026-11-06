@@ -240,11 +240,13 @@ export default function GameHub() {
                   <MessageCircle size={26} />
                 </span>
                 <span className="mode-number">04</span>
-                <h3>Salon du tuteur</h3>
-                <p>Un espace pour pratiquer l’échange.</p>
+                <h3>Parler avec Pip</h3>
+                <p>Écoutez, répétez et prenez la parole.</p>
                 <div>
                   <span>
-                    {state.ai.configured ? "Accès Premium" : "En préparation"}
+                    {state.ai.configured
+                      ? "Guidé + IA avec Premium"
+                      : "Pratique guidée disponible"}
                   </span>
                   <ArrowUpRight size={18} />
                 </div>

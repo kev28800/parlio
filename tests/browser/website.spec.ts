@@ -149,7 +149,7 @@ test("l’accueil, le choix des langues et les espaces IA et Premium sont access
   }
   await page.getByRole("button", { name: "Découvrir l’atelier" }).click();
   await expect(
-    page.getByRole("heading", { name: "L’atelier se prépare." }),
+    page.getByRole("heading", { name: "La conversation IA se prépare." }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Envoyer", exact: true }),

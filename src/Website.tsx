@@ -290,32 +290,35 @@ export default function Website() {
         </section>
         <section className="site-ai-section">
           <div className="ai-editorial-art" aria-hidden="true">
-            <span>
-              Un mot.
-              <br />
-              <em>Une question.</em>
-              <br />
-              Un échange.
+            <img
+              className="pip-oral-teaser"
+              src="/images/pip-oral.png"
+              alt=""
+              loading="lazy"
+              width="280"
+              height="280"
+            />
+            <span className="pip-oral-teaser-label">
+              Pip, votre compagnon oral.
             </span>
-            <Sparkles size={32} />
           </div>
           <div>
-            <span className="editorial-eyebrow">03 / L’ATELIER IA</span>
+            <span className="editorial-eyebrow">03 / L’ORAL AVEC PIP</span>
             <h2>
               Un accompagnement
               <br />
               <em>plus personnel.</em>
             </h2>
             <p>
-              Un tuteur pour pratiquer vos échanges et une séance de quatre
-              exercices adaptée aux notions travaillées. Vous gardez la main, à
-              chaque étape.
+              Écoutez Pip, répétez une phrase, puis relisez votre transcription.
+              La pratique guidée est disponible ; la conversation libre
+              nécessite l’activation de l’IA.
             </p>
             <span className="availability-label">
               <span />
               {state.ai.configured
                 ? "IA configurée · accès Premium"
-                : "En préparation · activation nécessaire"}
+                : "Pratique guidée disponible · IA en préparation"}
             </span>
             <p className="ai-site-note">
               L’IA est une aide de pratique : elle peut se tromper. Son
@@ -452,8 +455,16 @@ export default function Website() {
             <p>
               Si vous utilisez l’atelier IA, les messages de la conversation
               récente et les notions nécessaires à l’exercice sont transmis à
-              OpenAI. N’y saisissez pas de données sensibles. L’audio utilise la
-              synthèse vocale de votre appareil, à votre demande.
+              OpenAI après votre consentement. N’y saisissez pas de données
+              sensibles.
+            </p>
+            <p>
+              Pour pratiquer avec Pip, la lecture utilise les voix disponibles
+              sur votre appareil. La dictée démarre à votre demande, après votre
+              accord, et peut transmettre l’audio au service vocal de votre
+              navigateur. Parlio ne reçoit pas cet audio. Le texte reste dans la
+              page en pratique guidée ; en conversation IA, vous le relisez puis
+              choisissez de l’envoyer à OpenAI.
             </p>
             <p>
               Les paiements sont traités par Stripe ; Parlio ne reçoit pas les
