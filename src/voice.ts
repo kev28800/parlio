@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { wordLengthAt, type SpeechCue } from "./pipSpeech";
 
 interface Recognition {
   lang: string;
@@ -52,6 +53,7 @@ export function useBrowserVoice(
   const [error, setError] = useState("");
   const recognition = useRef<Recognition | null>(null);
   const utterance = useRef<SpeechSynthesisUtterance | null>(null);
+  const speech = useRef<SpeechCue | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transcriptCallback = useRef(onTranscript);
   transcriptCallback.current = onTranscript;
@@ -73,11 +75,16 @@ export function useBrowserVoice(
     }
   }
   function stopAudio() {
-    if (utterance.current)
+    if (utterance.current) {
       utterance.current.onstart =
         utterance.current.onend =
         utterance.current.onerror =
+        utterance.current.onboundary =
+        utterance.current.onpause =
+        utterance.current.onresume =
           null;
+    }
+    speech.current = null;
     utterance.current = null;
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   }
@@ -151,16 +158,59 @@ export function useBrowserVoice(
     current.voice = voice;
     current.rate = 0.85;
     current.onstart = () => {
-      if (utterance.current === current) setSpeaking(true);
+      if (utterance.current !== current) return;
+      const now = performance.now();
+      speech.current = {
+        text: current.text,
+        startedAt: now,
+        boundaryAt: now,
+        charIndex: 0,
+        wordLength: current.text.length,
+        hasBoundaries: false,
+        paused: false,
+      };
+      setSpeaking(true);
+    };
+    current.onboundary = (event) => {
+      if (
+        utterance.current !== current ||
+        !speech.current ||
+        event.name !== "word" ||
+        !Number.isFinite(event.charIndex)
+      )
+        return;
+      const index = Math.max(
+        0,
+        Math.min(current.text.length - 1, event.charIndex),
+      );
+      speech.current.charIndex = index;
+      speech.current.hasBoundaries = true;
+      speech.current.wordLength = wordLengthAt(current.text, index);
+      speech.current.boundaryAt = performance.now();
+    };
+    current.onpause = () => {
+      if (utterance.current === current && speech.current) {
+        speech.current.paused = true;
+        setSpeaking(false);
+      }
+    };
+    current.onresume = () => {
+      if (utterance.current === current && speech.current) {
+        speech.current.paused = false;
+        speech.current.boundaryAt = performance.now();
+        setSpeaking(true);
+      }
     };
     current.onend = () => {
       if (utterance.current === current) {
+        speech.current = null;
         setSpeaking(false);
         utterance.current = null;
       }
     };
     current.onerror = () => {
       if (utterance.current === current) {
+        speech.current = null;
         setSpeaking(false);
         utterance.current = null;
         setError("La lecture a échoué. Le texte vous permet de continuer.");
@@ -169,6 +219,7 @@ export function useBrowserVoice(
     try {
       window.speechSynthesis.speak(current);
     } catch {
+      speech.current = null;
       utterance.current = null;
       setSpeaking(false);
       setError("La lecture a échoué. Le texte vous permet de continuer.");
@@ -269,6 +320,7 @@ export function useBrowserVoice(
     canSpeak,
     canDictate,
     speaking,
+    speech,
     recording,
     requesting,
     interim,

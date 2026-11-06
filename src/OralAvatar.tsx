@@ -18,7 +18,7 @@ import { normalizeAnswer } from "../shared/learning";
 import type { CourseId } from "../shared/types";
 import { useApp } from "./context";
 import { useBrowserVoice } from "./voice";
-import { Fox } from "./ui";
+import PipAvatar from "./PipAvatar";
 
 export interface ReadRequest {
   id: number;
@@ -47,7 +47,6 @@ export default function OralAvatar({
   const [draft, setDraft] = useState("");
   const [checked, setChecked] = useState(false);
   const [voiceConsent, setVoiceConsent] = useState(false);
-  const [imageFailed, setImageFailed] = useState(false);
   const draftRef = useRef<HTMLTextAreaElement>(null);
   const lastRead = useRef(0);
   const samples = language.units[unitIndex].lessons.flatMap((lesson) => {
@@ -133,17 +132,13 @@ export default function OralAvatar({
           <span className="pip-stage-star star-b" aria-hidden="true">
             ✧
           </span>
-          <div className="pip-portrait">
-            {imageFailed ? (
-              <Fox happy />
-            ) : (
-              <img
-                src="/images/pip-oral.png"
-                alt="Pip, votre compagnon renard en illustration 3D"
-                onError={() => setImageFailed(true)}
-              />
-            )}
-          </div>
+          <PipAvatar
+            speech={voice.speech}
+            speaking={voice.speaking}
+            listening={voice.recording}
+            thinking={thinking}
+            reducedMotion={state.preferences.reducedMotion}
+          />
           <div className="pip-stage-floor" />
           <span className="pip-status" role="status">
             <span />
@@ -154,7 +149,7 @@ export default function OralAvatar({
               <span key={bar} />
             ))}
           </div>
-          <p>Avatar illustré · voix de votre appareil</p>
+          <p>Pip animé · voix de votre appareil</p>
         </div>
         <div className="oral-practice">
           <div

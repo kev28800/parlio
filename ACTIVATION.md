@@ -72,7 +72,9 @@ Ouvrir **Pip à l’oral**, choisir une langue puis **Écouter Pip**. La lecture
 
 Le site doit utiliser HTTPS ; la politique HTTP autorise `microphone=(self)` sur Vercel, Netlify et le serveur. Aucune capture ne démarre à l’arrivée sur la page. La session s’arrête après 20 secondes, en quittant la page, en changeant de langue ou en passant au clavier. Les phrases guidées viennent des cours et ne nécessitent aucune clé API. La comparaison porte uniquement sur les textes et n’attribue ni score de prononciation ni XP.
 
-Pip est une illustration au rendu 3D animée dans l’interface, sans synchronisation des lèvres. Les voix et la reconnaissance dépendent de l’appareil ; les tests utilisent des services simulés. Vérifier le micro et les trois langues sur les navigateurs ciblés avant d’annoncer leur prise en charge.
+Pip est un personnage articulé en 3D dans le navigateur. Il cligne des yeux, tourne la tête vers le pointeur, remue la queue et réagit au bouton **Faire coucou**. Sa bouche s’ouvre pendant la lecture et se ferme à l’arrêt, au démarrage du micro ou en cas d’erreur. Les frontières de mots servent de repères ; à défaut, la cadence est estimée. La synchronisation des lèvres reste approximative, sans analyse audio ni phonèmes fournis par le navigateur.
+
+Le bouton de pause et les réglages de réduction des animations figent les mouvements. Une marionnette vectorielle animée prend le relais si WebGL n’est pas disponible. Aucune caméra ni aucun service d’avatar externe n’est nécessaire. Les voix et la reconnaissance dépendent de l’appareil ; les tests utilisent des services vocaux simulés. Vérifier le micro et les trois langues sur les navigateurs ciblés avant d’annoncer leur prise en charge.
 
 ## IA : désactivée et indépendante de ChatGPT Plus
 

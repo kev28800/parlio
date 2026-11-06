@@ -5,7 +5,12 @@ async function voices(page: Page, supported = true) {
   await page.addInitScript(
     ({ supported }) => {
       const browser = window as any;
-      browser.__voice = { starts: 0, aborts: 0, spoken: [] as any[] };
+      browser.__voice = {
+        starts: 0,
+        aborts: 0,
+        spoken: [] as any[],
+        autoStart: true,
+      };
       let utterance: any;
       let recognition: any;
       Object.defineProperty(window, "speechSynthesis", {
@@ -27,7 +32,7 @@ async function voices(page: Page, supported = true) {
           speak(value: any) {
             utterance = value;
             browser.__voice.spoken.push({ text: value.text, lang: value.lang });
-            value.onstart?.();
+            if (browser.__voice.autoStart) value.onstart?.();
           },
         },
       });
@@ -65,6 +70,13 @@ async function voices(page: Page, supported = true) {
       browser.__denyVoice = () =>
         recognition?.onerror?.({ error: "not-allowed" });
       browser.__endSpeech = () => utterance?.onend?.();
+      browser.__beginSpeech = () => utterance?.onstart?.();
+      browser.__boundary = (charIndex: number) =>
+        utterance?.onboundary?.({ charIndex, name: "word" });
+      browser.__pauseSpeech = () => utterance?.onpause?.();
+      browser.__resumeSpeech = () => utterance?.onresume?.();
+      browser.__failSpeech = () =>
+        utterance?.onerror?.({ error: "synthesis-failed" });
     },
     { supported },
   );
@@ -82,14 +94,13 @@ test("Pip lit la bonne langue et ne démarre le micro qu’après consentement e
   await expect(
     page.getByRole("heading", { name: "Et si on se parlait ?" }),
   ).toBeVisible();
-  await expect(page.locator(".pip-portrait img")).toBeVisible();
-  await expect
-    .poll(() =>
-      page
-        .locator(".pip-portrait img")
-        .evaluate((img: HTMLImageElement) => img.naturalWidth),
-    )
-    .toBeGreaterThan(0);
+  await expect(
+    page.getByRole("img", { name: /Pip, votre renard animé/ }),
+  ).toBeVisible();
+  await expect(page.locator(".pip-interactive")).toHaveAttribute(
+    "data-renderer",
+    /3d|2d/,
+  );
   expect(await page.evaluate(() => (window as any).__voice.starts)).toBe(0);
   await expect(
     page.getByRole("button", { name: "Parler à Pip", exact: true }),
@@ -294,4 +305,120 @@ test("une transcription IA est relue puis envoyée explicitement ; Pip lit la r�
     await page.evaluate(() => (window as any).__voice.spoken.at(-1)),
   ).toEqual({ text: "Hello! How are you?", lang: "en-GB" });
   expect(sent).toBe(1);
+});
+
+test("le renard 3D articule seulement pendant la voix, réagit au coucou et respecte la pause", async ({
+  page,
+}) => {
+  await voices(page);
+  await page.goto("/#tutor");
+  const pip = page.locator(".pip-interactive");
+  await expect(pip).toHaveAttribute("data-renderer", "3d");
+  await expect(pip.locator("canvas")).toBeVisible();
+  await page.evaluate(() => {
+    (window as any).__voice.autoStart = false;
+  });
+  await page.getByRole("button", { name: "Écouter Pip", exact: true }).click();
+  await expect(pip).toHaveAttribute("data-mouth", "0.000");
+  await expect(page.locator(".pip-stage")).not.toHaveClass(/pip-speaking/);
+  await page.evaluate(() => (window as any).__beginSpeech());
+  await expect(page.locator(".pip-stage")).toHaveClass(/pip-speaking/);
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeGreaterThan(0.12);
+  // A voice without word events must keep articulating until it actually stops.
+  await page.waitForTimeout(800);
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeGreaterThan(0.12);
+  await page.evaluate(() => (window as any).__pauseSpeech());
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeLessThan(0.02);
+  await page.evaluate(() => {
+    (window as any).__resumeSpeech();
+    (window as any).__boundary(1);
+  });
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeGreaterThan(0.12);
+  await page.evaluate(() => (window as any).__endSpeech());
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeLessThan(0.02);
+  await page.getByRole("button", { name: "Faire coucou", exact: true }).click();
+  await expect(pip).toHaveAttribute("data-gesture", "wave");
+  await page
+    .getByRole("button", { name: "Mettre les animations de Pip en pause" })
+    .click();
+  await expect(pip).toHaveAttribute("data-animations", "paused");
+  await expect(pip).toHaveAttribute("data-mouth", "0.000");
+  await expect(
+    page.getByRole("button", { name: "Faire coucou", exact: true }),
+  ).toBeDisabled();
+  const still = await pip.screenshot();
+  await page.waitForTimeout(200);
+  expect((await pip.screenshot()).equals(still)).toBe(true);
+  await page
+    .getByRole("button", { name: "Reprendre les animations de Pip" })
+    .click();
+  await expect(pip).toHaveAttribute("data-animations", "playing");
+  await page.getByRole("button", { name: "Écouter Pip", exact: true }).click();
+  await page.evaluate(() => {
+    (window as any).__beginSpeech();
+    (window as any).__boundary(1);
+  });
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeGreaterThan(0.12);
+  await page.evaluate(() => (window as any).__failSpeech());
+  await expect(page.getByRole("alert")).toContainText("La lecture a échoué");
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeLessThan(0.02);
+  await page.evaluate(() => (window as any).__beginSpeech());
+  await expect(page.locator(".pip-stage")).not.toHaveClass(/pip-speaking/);
+  expect(await page.evaluate(() => (window as any).__voice.starts)).toBe(0);
+});
+
+test("sans WebGL Pip reste animé ; la réduction des mouvements fige aussi le personnage", async ({
+  page,
+}) => {
+  await voices(page);
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      type: string,
+      ...args: any[]
+    ) {
+      if (type.startsWith("webgl") || type === "experimental-webgl")
+        return null;
+      return (original as any).call(this, type, ...args);
+    } as typeof original;
+  });
+  await page.goto("/#tutor");
+  const pip = page.locator(".pip-interactive");
+  await expect(pip).toHaveAttribute("data-renderer", "2d");
+  await expect(pip.locator("svg")).toBeVisible();
+  await page.getByRole("button", { name: "Faire coucou", exact: true }).click();
+  await expect(pip).toHaveAttribute("data-gesture", "wave");
+  await page.getByRole("button", { name: "Écouter Pip", exact: true }).click();
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeGreaterThan(0.12);
+  await page.evaluate(() => (window as any).__endSpeech());
+  await expect
+    .poll(async () => Number(await pip.getAttribute("data-mouth")))
+    .toBeLessThan(0.02);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(pip).toHaveAttribute("data-animations", "paused");
+  await expect(
+    page.getByRole("button", { name: "Faire coucou", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Écouter Pip", exact: true }).click();
+  await expect(page.locator(".pip-stage")).toHaveClass(/pip-speaking/);
+  await expect(pip).toHaveAttribute("data-mouth", "0.000");
+  await page.getByRole("button", { name: "Arrêter la lecture" }).click();
+  await expect(page.locator(".pip-stage")).not.toHaveClass(/pip-speaking/);
 });
